@@ -2,14 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { api } from "@/lib/api";
 import Link from "next/link";
-import ReplyBox from "@/components/ReplyBox";
+import ChatBox from "@/components/ChatBox";
 import TicketActions from "@/components/TicketActions";
-
-const ROLE_STYLES: Record<string, string> = {
-  user:      "bg-gray-800 text-gray-100 self-start",
-  bot:       "bg-blue-900 text-blue-100 self-start",
-  agent:     "bg-green-900 text-green-100 self-start",
-};
 
 export default async function TicketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -49,24 +43,12 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
         <TicketActions ticketId={ticket.id} currentStatus={ticket.status} assignedTo={ticket.assigned_to} />
       </div>
 
-      {/* Conversation */}
-      <div className="space-y-3 mb-6">
-        {messages.map((m: any) => (
-          <div key={m.id} className="flex flex-col">
-            <div className={`rounded-xl px-4 py-3 max-w-[85%] text-sm whitespace-pre-wrap ${ROLE_STYLES[m.role] ?? "bg-gray-800"}`}>
-              {m.content}
-            </div>
-            <p className="text-xs text-gray-600 mt-1 px-1">
-              {m.role} · {m.message_type} · {m.created_at ? new Date(m.created_at).toLocaleTimeString() : ""}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Reply */}
-      {ticket.status !== "resolved" && (
-        <ReplyBox ticketId={ticket.id} />
-      )}
+      {/* Chat — handles messages, polling, optimistic sends, and reply input */}
+      <ChatBox
+        ticketId={ticket.id}
+        initialMessages={messages}
+        ticketStatus={ticket.status}
+      />
     </div>
   );
 }
