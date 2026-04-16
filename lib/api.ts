@@ -1,10 +1,15 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// Server components fetch directly; client components go through the proxy
+// to avoid mixed content (HTTPS page → HTTP backend blocked by browsers).
+const isClient = typeof window !== "undefined";
+const DIRECT_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const BASE = isClient ? "/api/proxy" : DIRECT_BASE;
 const KEY  = process.env.NEXT_PUBLIC_API_KEY  || "";
 
 async function apiFetch(path: string, options: RequestInit = {}) {
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
+      // Proxy route handles auth server-side; include key anyway for direct calls
       "Content-Type": "application/json",
       "X-API-Key": KEY,
       ...options.headers,
