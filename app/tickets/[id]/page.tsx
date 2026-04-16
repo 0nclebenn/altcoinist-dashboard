@@ -9,9 +9,10 @@ const ROLE_STYLES: Record<string, string> = {
   agent:     "bg-green-900 text-green-100 self-start",
 };
 
-export default async function TicketPage({ params }: { params: { id: string } }) {
+export default async function TicketPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   let data: any = null;
-  try { data = await api.ticket(Number(params.id)); } catch {}
+  try { data = await api.ticket(Number(id)); } catch {}
 
   if (!data) {
     return (

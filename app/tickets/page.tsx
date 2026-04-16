@@ -11,12 +11,13 @@ const STATUS_COLORS: Record<string, string> = {
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: { status?: string; tag?: string; page?: string };
+  searchParams: Promise<{ status?: string; tag?: string; page?: string }>;
 }) {
+  const sp = await searchParams;
   const params = new URLSearchParams();
-  if (searchParams.status) params.set("status", searchParams.status);
-  if (searchParams.tag)    params.set("tag",    searchParams.tag);
-  if (searchParams.page)   params.set("page",   searchParams.page);
+  if (sp.status) params.set("status", sp.status);
+  if (sp.tag)    params.set("tag",    sp.tag);
+  if (sp.page)   params.set("page",   sp.page);
 
   let data: any = { tickets: [], total: 0 };
   try { data = await api.tickets(params.toString() ? `?${params}` : ""); } catch {}
@@ -35,7 +36,7 @@ export default async function TicketsPage({
             key={s}
             href={s ? `/tickets?status=${s}` : "/tickets"}
             className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-              (searchParams.status ?? "") === s
+              (sp.status ?? "") === s
                 ? "bg-white text-gray-900 border-white"
                 : "border-gray-700 text-gray-400 hover:border-gray-500"
             }`}
@@ -60,26 +61,24 @@ export default async function TicketsPage({
           </thead>
           <tbody>
             {data.tickets.map((t: any) => (
-              <tr key={t.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors">
-                <td className="px-4 py-3">
-                  <Link href={`/tickets/${t.id}`} className="text-blue-400 hover:underline">
-                    #{t.id}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-gray-300">
-                  {t.username ? `@${t.username}` : `#${t.chat_id}`}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[t.status] ?? "bg-gray-800 text-gray-400"}`}>
-                    {t.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{(t.tags ?? []).join(", ") || "—"}</td>
-                <td className="px-4 py-3 text-gray-300">{t.csat_score ?? "—"}</td>
-                <td className="px-4 py-3 text-gray-500 text-xs">
-                  {t.created_at ? new Date(t.created_at).toLocaleDateString() : "—"}
-                </td>
-              </tr>
+              <Link key={t.id} href={`/tickets/${t.id}`} className="contents">
+                <tr className="border-b border-gray-800 hover:bg-gray-800 transition-colors cursor-pointer">
+                  <td className="px-4 py-3 text-blue-400">#{t.id}</td>
+                  <td className="px-4 py-3 text-gray-300">
+                    {t.username ? `@${t.username}` : `#${t.chat_id}`}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[t.status] ?? "bg-gray-800 text-gray-400"}`}>
+                      {t.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 text-xs">{(t.tags ?? []).join(", ") || "—"}</td>
+                  <td className="px-4 py-3 text-gray-300">{t.csat_score ?? "—"}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">
+                    {t.created_at ? new Date(t.created_at).toLocaleDateString() : "—"}
+                  </td>
+                </tr>
+              </Link>
             ))}
             {data.tickets.length === 0 && (
               <tr>
