@@ -48,12 +48,17 @@ export default function ChatBox({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Poll for new messages every 6 seconds (catches incoming user replies)
+  // Poll for new messages every 6 seconds (catches incoming user replies).
+  // Skip the update if there are pending optimistic messages — otherwise the
+  // poll would fetch stale server data and wipe the in-flight message.
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         const data = await api.ticket(ticketId);
-        setMessages(data.messages);
+        setMessages(prev => {
+          if (prev.some(m => m.pending)) return prev; // skip if send in flight
+          return data.messages;
+        });
       } catch {
         // silently ignore poll errors
       }
