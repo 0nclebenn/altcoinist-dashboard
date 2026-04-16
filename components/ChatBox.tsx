@@ -81,11 +81,12 @@ export default function ChatBox({
 
     try {
       await api.replyTicket(ticketId, content);
-      // Fetch confirmed messages from server
-      const data = await api.ticket(ticketId);
-      setMessages(data.messages);
+      // Mark optimistic as confirmed — don't re-fetch (stale cache would erase it).
+      // The 6-second poll will replace the temp message with the real DB record.
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, pending: false } : m))
+      );
     } catch {
-      // Mark the optimistic message as failed
       setMessages((prev) =>
         prev.map((m) =>
           m.id === tempId ? { ...m, pending: false, failed: true } : m

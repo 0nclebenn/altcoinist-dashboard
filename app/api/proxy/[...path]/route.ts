@@ -30,6 +30,7 @@ async function handle(
       "Content-Type": "application/json",
       "X-API-Key": API_KEY,
     },
+    cache: "no-store",
     ...(body ? { body } : {}),
   });
 
