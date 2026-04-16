@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import useSWR from "swr";
 import { api } from "@/lib/api";
 
 type Message = {
@@ -9,13 +10,14 @@ type Message = {
   message_type: string;
   created_at: string | null;
   pending?: boolean;
-  failed?: boolean;
 };
 
+type TicketData = { messages: Message[] };
+
 const ROLE_STYLES: Record<string, string> = {
-  user:  "bg-gray-800 text-gray-100 self-start",
-  bot:   "bg-blue-900 text-blue-100 self-start",
-  agent: "bg-green-900 text-green-100 self-end",
+  user:  "bg-gray-800 text-gray-100",
+  bot:   "bg-blue-900 text-blue-100",
+  agent: "bg-green-900 text-green-100",
 };
 
 function timeAgo(iso: string | null) {
@@ -38,71 +40,63 @@ export default function ChatBox({
   initialMessages: Message[];
   ticketStatus: string;
 }) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const { data, mutate } = useSWR<TicketData>(
+    `ticket-${ticketId}`,
+    () => api.ticket(ticketId),
+    {
+      fallbackData: { messages: initialMessages },
+      refreshInterval: 6000,      // poll for incoming user replies
+      revalidateOnFocus: false,
+    }
+  );
+
+  const messages: Message[] = data?.messages ?? initialMessages;
+
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom whenever messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Poll for new messages every 6 seconds (catches incoming user replies).
-  // Skip the update if there are pending optimistic messages — otherwise the
-  // poll would fetch stale server data and wipe the in-flight message.
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const data = await api.ticket(ticketId);
-        setMessages(prev => {
-          if (prev.some(m => m.pending)) return prev; // skip if send in flight
-          return data.messages;
-        });
-      } catch {
-        // silently ignore poll errors
-      }
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [ticketId]);
-
   async function send() {
     const content = text.trim();
-    if (!content) return;
+    if (!content || sending) return;
 
-    // Optimistic: show message immediately
-    const tempId = `pending-${Date.now()}`;
+    setText("");
+    setSending(true);
+
     const optimistic: Message = {
-      id: tempId,
+      id: `pending-${Date.now()}`,
       role: "agent",
       content,
       message_type: "text",
       created_at: new Date().toISOString(),
       pending: true,
     };
-    setMessages((prev) => [...prev, optimistic]);
-    setText("");
-    setSending(true);
 
     try {
-      await api.replyTicket(ticketId, content);
-      // Mark optimistic as confirmed — don't re-fetch (stale cache would erase it).
-      // The 6-second poll will replace the temp message with the real DB record.
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? { ...m, pending: false } : m))
-      );
-    } catch {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === tempId ? { ...m, pending: false, failed: true } : m
-        )
+      await mutate(
+        async (current: TicketData | undefined) => {
+          await api.replyTicket(ticketId, content);
+          return current; // SWR revalidates with fresh data after this resolves
+        },
+        {
+          optimisticData: (current: TicketData | undefined) => ({
+            ...(current ?? {}),
+            messages: [...(current?.messages ?? []), optimistic],
+          }),
+          rollbackOnError: true,
+          revalidate: true,
+        }
       );
     } finally {
       setSending(false);
     }
   }
 
-  function handleKey(e: React.KeyboardEvent) {
+  function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       send();
@@ -121,7 +115,7 @@ export default function ChatBox({
             <div
               className={`rounded-xl px-4 py-3 max-w-[85%] text-sm whitespace-pre-wrap ${
                 ROLE_STYLES[m.role] ?? "bg-gray-800 text-gray-100"
-              } ${m.failed ? "opacity-50 border border-red-500" : ""}`}
+              } ${m.pending ? "opacity-60" : ""}`}
             >
               {m.content}
             </div>
@@ -130,8 +124,6 @@ export default function ChatBox({
               <span>·</span>
               {m.pending ? (
                 <span className="text-gray-500">sending…</span>
-              ) : m.failed ? (
-                <span className="text-red-500">failed — tap to retry</span>
               ) : (
                 <>
                   <span>{timeAgo(m.created_at)}</span>
