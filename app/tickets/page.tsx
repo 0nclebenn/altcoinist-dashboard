@@ -22,7 +22,7 @@ export default async function TicketsPage({
   if (sp.page)   params.set("page",   sp.page);
 
   let data: any = { tickets: [], total: 0 };
-  try { data = await api.tickets(params.toString() ? `?${params}` : ""); } catch {}
+  try { data = await api.tickets({ status: sp.status, tag: sp.tag, page: sp.page ? Number(sp.page) : undefined }); } catch {}
 
   return (
     <div>
