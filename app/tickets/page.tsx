@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { TicketView } from "@/lib/api";
 import TicketViewsSidebar from "@/components/TicketViewsSidebar";
@@ -17,7 +17,7 @@ interface Ticket {
   created_at: string;
 }
 
-export default function TicketsPage() {
+function TicketsContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -51,14 +51,6 @@ export default function TicketsPage() {
     pushURL(activeView, ticket.id);
   };
 
-  const handleViewCreated = () => {
-    setViewRefresh((n) => n + 1);
-  };
-
-  const handleStatusChange = () => {
-    setListRefresh((n) => n + 1);
-  };
-
   return (
     <div className="flex h-full overflow-hidden">
       <TicketViewsSidebar
@@ -78,7 +70,7 @@ export default function TicketsPage() {
       {activeTicketId ? (
         <TicketDetail
           ticketId={activeTicketId}
-          onStatusChange={handleStatusChange}
+          onStatusChange={() => setListRefresh((n) => n + 1)}
         />
       ) : (
         <div className="flex-1 flex items-center justify-center text-gray-600 text-sm">
@@ -88,10 +80,18 @@ export default function TicketsPage() {
 
       {showCreateModal && (
         <CreateViewModal
-          onCreated={handleViewCreated}
+          onCreated={() => setViewRefresh((n) => n + 1)}
           onClose={() => setShowCreateModal(false)}
         />
       )}
     </div>
+  );
+}
+
+export default function TicketsPage() {
+  return (
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center text-gray-600 text-sm">Loading…</div>}>
+      <TicketsContent />
+    </Suspense>
   );
 }
