@@ -78,10 +78,9 @@ export default function ChatBox({
 
     try {
       await mutate(
-        async () => {
+        async (current: TicketData | undefined) => {
           await api.replyTicket(ticketId, content);
-          // Return nothing — populateCache: false means SWR won't overwrite
-          // the cache with this return value. It will only update via revalidate.
+          return current;
         },
         {
           optimisticData: (current: TicketData | undefined) => ({
