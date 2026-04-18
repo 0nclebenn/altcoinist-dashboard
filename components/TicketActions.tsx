@@ -7,10 +7,12 @@ export default function TicketActions({
   ticketId,
   currentStatus,
   assignedTo,
+  onSave,
 }: {
   ticketId: number;
   currentStatus: string;
   assignedTo: string | null;
+  onSave?: () => void;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(currentStatus);
@@ -21,7 +23,7 @@ export default function TicketActions({
     setSaving(true);
     try {
       await api.updateTicket(ticketId, { status, assigned_to: agent || null });
-      router.refresh();
+      if (onSave) onSave(); else router.refresh();
     } finally {
       setSaving(false);
     }

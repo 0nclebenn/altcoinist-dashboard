@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
-export default function ReplyBox({ ticketId }: { ticketId: number }) {
+export default function ReplyBox({ ticketId, onSent }: { ticketId: number; onSent?: () => void }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -18,7 +18,7 @@ export default function ReplyBox({ ticketId }: { ticketId: number }) {
       await api.replyTicket(ticketId, text.trim());
       setSent(true);
       setText("");
-      router.refresh(); // re-fetch server component to show the new message
+      if (onSent) onSent(); else router.refresh();
       setTimeout(() => setSent(false), 3000);
     } catch {
       setError("Failed to send. Is the bot server running?");
