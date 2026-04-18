@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import TeamManager from "@/components/TeamManager";
 import KBEditor from "@/components/KBEditor";
 import KBSuggestions from "@/components/KBSuggestions";
+import DocUpdateSuggestions from "@/components/DocUpdateSuggestions";
 
 const TABS = ["Team", "Knowledge Base"] as const;
 type Tab = (typeof TABS)[number];
@@ -19,6 +20,7 @@ export default function SettingsPage() {
   // KB data
   const [replies, setReplies] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [docUpdates, setDocUpdates] = useState<any[]>([]);
   const [kbLoaded, setKbLoaded] = useState(false);
 
   useEffect(() => {
@@ -29,10 +31,11 @@ export default function SettingsPage() {
         .finally(() => setAgentsLoaded(true));
     }
     if (activeTab === "Knowledge Base" && !kbLoaded) {
-      Promise.all([api.scriptedReplies(), api.kbSuggestions()])
-        .then(([r, s]: any[]) => {
+      Promise.all([api.scriptedReplies(), api.kbSuggestions(), api.docUpdateSuggestions()])
+        .then(([r, s, d]: any[]) => {
           setReplies(r.replies ?? []);
           setSuggestions(s.suggestions ?? []);
+          setDocUpdates(d.suggestions ?? []);
         })
         .catch(() => {})
         .finally(() => setKbLoaded(true));
@@ -68,6 +71,14 @@ export default function SettingsPage() {
       {activeTab === "Knowledge Base" && (
         kbLoaded ? (
           <div>
+            {docUpdates.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-lg font-semibold mb-4 text-green-400">
+                  📝 {docUpdates.length} Pending Doc Update{docUpdates.length !== 1 ? "s" : ""}
+                </h2>
+                <DocUpdateSuggestions suggestions={docUpdates} />
+              </div>
+            )}
             {suggestions.length > 0 && (
               <div className="mb-10">
                 <h2 className="text-lg font-semibold mb-4 text-yellow-400">

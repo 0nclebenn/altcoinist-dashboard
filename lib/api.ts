@@ -71,4 +71,7 @@ export const api = {
     apiFetch(`/api/ticket-views/${id}`, { method: "PUT", body: JSON.stringify(body) }) as Promise<TicketView>,
   deleteTicketView: (id: number) =>
     apiFetch(`/api/ticket-views/${id}`, { method: "DELETE" }),
+  docUpdateSuggestions: ()         => apiFetch("/api/doc-update-suggestions"),
+  approveDocUpdate:     (id: number) => apiFetch(`/api/doc-update-suggestions/${id}/approve`, { method: "POST" }),
+  rejectDocUpdate:      (id: number) => apiFetch(`/api/doc-update-suggestions/${id}/reject`,  { method: "POST" }),
 };
