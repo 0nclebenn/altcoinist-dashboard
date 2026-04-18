@@ -74,4 +74,8 @@ export const api = {
   docUpdateSuggestions: ()         => apiFetch("/api/doc-update-suggestions"),
   approveDocUpdate:     (id: number) => apiFetch(`/api/doc-update-suggestions/${id}/approve`, { method: "POST" }),
   rejectDocUpdate:      (id: number) => apiFetch(`/api/doc-update-suggestions/${id}/reject`,  { method: "POST" }),
+  buttonSuggestions:    ()           => apiFetch("/api/button-suggestions"),
+  approveButton:        (id: number) => apiFetch(`/api/button-suggestions/${id}/approve`, { method: "POST" }),
+  rejectButton:         (id: number) => apiFetch(`/api/button-suggestions/${id}/reject`,  { method: "POST" }),
+  runButtonAnalysis:    ()           => apiFetch("/api/admin/run-button-analysis", { method: "POST" }),
 };
