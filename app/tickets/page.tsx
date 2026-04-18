@@ -90,8 +90,10 @@ function TicketsContent() {
 
 export default function TicketsPage() {
   return (
-    <Suspense fallback={<div className="flex-1 flex items-center justify-center text-gray-600 text-sm">Loading…</div>}>
-      <TicketsContent />
-    </Suspense>
+    <div className="h-screen flex flex-col">
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center text-gray-600 text-sm">Loading…</div>}>
+        <TicketsContent />
+      </Suspense>
+    </div>
   );
 }

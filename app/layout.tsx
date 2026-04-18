@@ -14,10 +14,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={`${inter.className} bg-gray-950 text-gray-100 min-h-screen`}>
-          <div className="flex">
+        <body className={`${inter.className} bg-gray-950 text-gray-100`}>
+          <div className="flex h-screen overflow-hidden">
             <Sidebar />
-            <main className="flex-1 ml-56 p-8 min-h-screen">{children}</main>
+            <main className="flex-1 ml-56 overflow-auto">{children}</main>
           </div>
         </body>
       </html>
