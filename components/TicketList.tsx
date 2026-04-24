@@ -9,6 +9,8 @@ interface Ticket {
   status: string;
   priority: string;
   tags: string[];
+  resolution_type: string | null;
+  csat_score: string | null;
   created_at: string;
 }
 
@@ -31,6 +33,26 @@ const STATUS_DOT: Record<string, string> = {
   escalated: "bg-red-400",
   resolved: "bg-green-400",
   pending: "bg-yellow-400",
+};
+
+const RESOLUTION_BADGE: Record<string, string> = {
+  ai:           "bg-blue-900/60 text-blue-400",
+  scripted:     "bg-purple-900/60 text-purple-400",
+  human:        "bg-green-900/60 text-green-400",
+  auto_timeout: "bg-gray-800 text-gray-500",
+};
+
+const RESOLUTION_LABEL: Record<string, string> = {
+  ai:           "AI",
+  scripted:     "Scripted",
+  human:        "Human",
+  auto_timeout: "Timed out",
+};
+
+const CSAT_DISPLAY: Record<string, string> = {
+  resolved: "✅",
+  partial:  "🔄",
+  no_help:  "❌",
 };
 
 export default function TicketList({ activeView, activeTicketId, onSelect, refreshSignal }: Props) {
@@ -88,7 +110,7 @@ export default function TicketList({ activeView, activeTicketId, onSelect, refre
               </div>
               <span className="text-[10px] text-gray-500 flex-shrink-0 ml-2">{timeAgo(t.created_at)}</span>
             </div>
-            <div className="flex items-center gap-1.5 pl-3.5">
+            <div className="flex items-center gap-1.5 pl-3.5 flex-wrap">
               {t.tags.slice(0, 2).map((tag) => (
                 <span key={tag} className="text-[9px] bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded">
                   {tag}
@@ -96,6 +118,14 @@ export default function TicketList({ activeView, activeTicketId, onSelect, refre
               ))}
               {t.priority === "high" && (
                 <span className="text-[9px] bg-red-900/60 text-red-400 px-1.5 py-0.5 rounded">high</span>
+              )}
+              {t.resolution_type && RESOLUTION_BADGE[t.resolution_type] && (
+                <span className={`text-[9px] px-1.5 py-0.5 rounded ${RESOLUTION_BADGE[t.resolution_type]}`}>
+                  {RESOLUTION_LABEL[t.resolution_type]}
+                </span>
+              )}
+              {t.csat_score && CSAT_DISPLAY[t.csat_score] && (
+                <span className="text-[10px]">{CSAT_DISPLAY[t.csat_score]}</span>
               )}
             </div>
           </button>

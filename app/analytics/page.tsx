@@ -19,11 +19,13 @@ export default async function AnalyticsPage() {
   try { data = await api.analytics(); } catch {}
 
   const statCards = [
-    { label: "Open Tickets",       value: stats?.open_tickets       ?? "—" },
-    { label: "Escalated",          value: stats?.escalated_tickets  ?? "—" },
-    { label: "Tickets This Week",  value: stats?.tickets_this_week  ?? "—" },
-    { label: "AI Resolution Rate", value: stats?.ai_resolution_rate != null ? `${stats.ai_resolution_rate}%` : "—" },
-    { label: "Avg CSAT",           value: stats?.avg_csat           != null ? `${stats.avg_csat} / 5` : "—" },
+    { label: "Open Tickets",          value: stats?.open_tickets            ?? "—" },
+    { label: "Escalated",             value: stats?.escalated_tickets       ?? "—" },
+    { label: "Tickets This Week",     value: stats?.tickets_this_week       ?? "—" },
+    { label: "AI Resolution Rate",    value: stats?.ai_resolution_rate     != null ? `${stats.ai_resolution_rate}%`    : "—" },
+    { label: "Human Resolution Rate", value: stats?.human_resolution_rate  != null ? `${stats.human_resolution_rate}%` : "—" },
+    { label: "CSAT Score",            value: stats?.csat_score_pct         != null ? `${stats.csat_score_pct}%`        : "—" },
+    { label: "CSAT Response Rate",    value: stats?.csat_response_rate     != null ? `${stats.csat_response_rate}%`    : "—" },
   ];
 
   const weekDelta = stats ? stats.tickets_this_week - stats.tickets_prev_week : null;
@@ -32,7 +34,7 @@ export default async function AnalyticsPage() {
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-6">Analytics</h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-4">
         {statCards.map(({ label, value }) => (
           <StatCard key={label} label={label} value={value} />
         ))}

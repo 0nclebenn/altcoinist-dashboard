@@ -57,9 +57,9 @@ export default function Charts({ data }: { data: any }) {
           <LineChart data={data.csat_trend}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis dataKey="week" tick={{ fill: "#9CA3AF", fontSize: 11 }} />
-            <YAxis domain={[0, 5]} tick={{ fill: "#9CA3AF", fontSize: 11 }} />
-            <Tooltip contentStyle={{ background: "#111827", border: "1px solid #374151" }} />
-            <Line type="monotone" dataKey="avg_csat" stroke="#F59E0B" strokeWidth={2} dot={false} />
+            <YAxis domain={[0, 100]} unit="%" tick={{ fill: "#9CA3AF", fontSize: 11 }} />
+            <Tooltip contentStyle={{ background: "#111827", border: "1px solid #374151" }} formatter={(v: number) => [`${v}%`, "CSAT Score"]} />
+            <Line type="monotone" dataKey="csat_score_pct" stroke="#F59E0B" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>

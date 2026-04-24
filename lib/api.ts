@@ -3,7 +3,7 @@
 const isClient = typeof window !== "undefined";
 const DIRECT_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const BASE = isClient ? "/api/proxy" : DIRECT_BASE;
-const KEY  = process.env.NEXT_PUBLIC_API_KEY  || "";
+const KEY  = isClient ? "" : (process.env.API_KEY || "");
 
 async function apiFetch(path: string, options: RequestInit = {}) {
   const res = await fetch(`${BASE}${path}`, {
@@ -32,6 +32,7 @@ export type TicketView = {
 export type TicketFilters = {
   status?: string;
   priority?: string;
+  resolution_type?: string;
   assigned_to?: string;
   tag?: string;
   page?: number;
@@ -42,9 +43,10 @@ export const api = {
   stats:          ()                          => apiFetch("/api/stats"),
   tickets:        (filters: TicketFilters = {}) => {
     const q = new URLSearchParams();
-    if (filters.status)      q.set("status",      filters.status);
-    if (filters.priority)    q.set("priority",    filters.priority);
-    if (filters.assigned_to) q.set("assigned_to", filters.assigned_to);
+    if (filters.status)          q.set("status",          filters.status);
+    if (filters.priority)        q.set("priority",        filters.priority);
+    if (filters.resolution_type) q.set("resolution_type", filters.resolution_type);
+    if (filters.assigned_to)     q.set("assigned_to",     filters.assigned_to);
     if (filters.tag)         q.set("tag",         filters.tag);
     if (filters.page)        q.set("page",        String(filters.page));
     if (filters.limit)       q.set("limit",       String(filters.limit));

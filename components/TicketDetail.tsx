@@ -20,6 +20,9 @@ interface TicketData {
     priority: string;
     tags: string[];
     assigned_to: string | null;
+    resolution_type: string | null;
+    resolution_summary: string | null;
+    csat_score: string | null;
     created_at: string;
     resolved_at: string | null;
   };
@@ -42,6 +45,26 @@ const STATUS_COLOR: Record<string, string> = {
   escalated: "text-red-400",
   resolved: "text-green-400",
   pending: "text-yellow-400",
+};
+
+const RESOLUTION_BADGE: Record<string, string> = {
+  ai:           "bg-blue-900/60 text-blue-400",
+  scripted:     "bg-purple-900/60 text-purple-400",
+  human:        "bg-green-900/60 text-green-400",
+  auto_timeout: "bg-gray-800 text-gray-500",
+};
+
+const RESOLUTION_LABEL: Record<string, string> = {
+  ai:           "AI resolved",
+  scripted:     "Scripted reply",
+  human:        "Human resolved",
+  auto_timeout: "Timed out",
+};
+
+const CSAT_DISPLAY: Record<string, { icon: string; label: string; color: string }> = {
+  resolved: { icon: "✅", label: "Resolved",        color: "text-green-400" },
+  partial:  { icon: "🔄", label: "Partially helped", color: "text-yellow-400" },
+  no_help:  { icon: "❌", label: "Didn't help",      color: "text-red-400" },
 };
 
 export default function TicketDetail({ ticketId, onStatusChange }: Props) {
@@ -101,6 +124,16 @@ export default function TicketDetail({ ticketId, onStatusChange }: Props) {
             <span className={STATUS_COLOR[ticket.status] ?? "text-gray-400"}>{ticket.status}</span>
             {ticket.priority === "high" && (
               <span className="ml-2 text-[10px] bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded">high priority</span>
+            )}
+            {ticket.resolution_type && RESOLUTION_BADGE[ticket.resolution_type] && (
+              <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded ${RESOLUTION_BADGE[ticket.resolution_type]}`}>
+                {RESOLUTION_LABEL[ticket.resolution_type]}
+              </span>
+            )}
+            {ticket.csat_score && CSAT_DISPLAY[ticket.csat_score] && (
+              <span className={`ml-2 text-[10px] ${CSAT_DISPLAY[ticket.csat_score].color}`}>
+                {CSAT_DISPLAY[ticket.csat_score].icon} {CSAT_DISPLAY[ticket.csat_score].label}
+              </span>
             )}
           </p>
         </div>

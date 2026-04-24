@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 
 const STATUS_OPTIONS = ["open", "pending", "escalated", "resolved"];
 const PRIORITY_OPTIONS = ["high", "medium", "low"];
+const RESOLUTION_TYPE_OPTIONS = ["ai", "scripted", "human", "auto_timeout"];
 
 interface Props {
   onCreated: () => void;
@@ -15,6 +16,7 @@ export default function CreateViewModal({ onCreated, onClose }: Props) {
   const [name, setName] = useState("");
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
+  const [resolutionType, setResolutionType] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -25,6 +27,7 @@ export default function CreateViewModal({ onCreated, onClose }: Props) {
     const filters: Record<string, string> = {};
     if (status) filters.status = status;
     if (priority) filters.priority = priority;
+    if (resolutionType) filters.resolution_type = resolutionType;
     try {
       await api.createTicketView({ name: name.trim(), filters });
       onCreated();
@@ -68,10 +71,20 @@ export default function CreateViewModal({ onCreated, onClose }: Props) {
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 mb-5 focus:outline-none focus:border-indigo-500"
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 mb-4 focus:outline-none focus:border-indigo-500"
         >
           <option value="">Any priority</option>
           {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+
+        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Resolution Type</label>
+        <select
+          value={resolutionType}
+          onChange={(e) => setResolutionType(e.target.value)}
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 mb-5 focus:outline-none focus:border-indigo-500"
+        >
+          <option value="">Any resolution</option>
+          {RESOLUTION_TYPE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
 
         {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
