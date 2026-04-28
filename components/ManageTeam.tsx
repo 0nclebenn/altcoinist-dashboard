@@ -120,6 +120,8 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState("");
+  const [inviteLink, setInviteLink] = useState("");
+  const [inviteEmailDelivered, setInviteEmailDelivered] = useState<boolean | null>(null);
 
   // Transfer ownership form state
   const [transferEmail, setTransferEmail] = useState("");
@@ -180,9 +182,13 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
     setInviteLoading(true);
     setInviteError("");
     setInviteSuccess("");
+    setInviteLink("");
+    setInviteEmailDelivered(null);
     try {
-      await api.sendInvite({ email: inviteEmail.trim(), role: inviteRole });
-      setInviteSuccess(`Invite sent to ${inviteEmail.trim()}`);
+      const res: any = await api.sendInvite({ email: inviteEmail.trim(), role: inviteRole });
+      setInviteSuccess(`Invitation created for ${inviteEmail.trim()}`);
+      setInviteLink(res?.invite_link ?? "");
+      setInviteEmailDelivered(res?.email_sent ?? null);
       setInviteEmail("");
       setInviteRole("moderator");
       await fetchInvites();
@@ -199,6 +205,8 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
     setInviteRole("moderator");
     setInviteError("");
     setInviteSuccess("");
+    setInviteLink("");
+    setInviteEmailDelivered(null);
   }
 
   // ── Transfer ownership submit ──────────────────────────────────────────────
@@ -364,6 +372,36 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
             {inviteSuccess && (
               <p className="text-xs text-emerald-400">{inviteSuccess}</p>
             )}
+            {inviteLink && (
+              <div className="mt-2 p-3 bg-gray-800 border border-gray-700 rounded-md space-y-2">
+                {inviteEmailDelivered === false && (
+                  <p className="text-xs text-amber-400">
+                    Email could not be delivered automatically. Copy the link below and share it directly:
+                  </p>
+                )}
+                {inviteEmailDelivered === true && (
+                  <p className="text-xs text-gray-400">
+                    Email sent. You can also share this link directly:
+                  </p>
+                )}
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    readOnly
+                    value={inviteLink}
+                    className="flex-1 bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1 font-mono"
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(inviteLink)}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 pt-1">
               <button
                 type="submit"
@@ -527,8 +565,8 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                       </select>
                     )}
 
-                    {/* Editable member: delete button */}
-                    {isEditable && (
+                    {/* Editable member: delete button — never on owner */}
+                    {isEditable && member.role !== "super_admin" && (
                       <button
                         onClick={() => handleDeleteMember(member.username)}
                         disabled={isDeleting}
