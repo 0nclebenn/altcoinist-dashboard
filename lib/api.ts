@@ -122,8 +122,21 @@ export const api = {
 
   // Invites
   listInvites: () => apiFetch("/api/invites"),
-  sendInvite: (body: { email: string; role: "admin" | "moderator" }) =>
-    apiFetch("/api/invites", { method: "POST", body: JSON.stringify(body) }),
+  // sendInvite hits the orchestrator route (adds to Clerk allowlist + creates DB invitation + Brevo email)
+  sendInvite: async (body: { email: string; role: "admin" | "moderator" }) => {
+    const res = await fetch("/api/team/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.detail ?? `API error ${res.status}: /api/team/invite`);
+    }
+    if (res.status === 204) return;
+    return res.json();
+  },
   cancelInvite: (id: string) => apiFetch(`/api/invites/${id}`, { method: "DELETE" }),
 
   // Ownership transfer
