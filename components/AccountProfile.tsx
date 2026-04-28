@@ -2,6 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useState, useEffect, useRef } from "react";
+import { api } from "@/lib/api";
 
 // ── Toggle Switch ────────────────────────────────────────────────────────────
 
@@ -139,6 +140,17 @@ export default function AccountProfile() {
   const [usernameSuccess, setUsernameSuccess] = useState(false);
   const usernameInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Telegram handle state (backed by agent.username on the support bot) ───
+  const [tgValue, setTgValue] = useState("");           // saved value from backend
+  const [tgDraft, setTgDraft] = useState("");           // current input
+  const [tgEditing, setTgEditing] = useState(false);
+  const [tgSaving, setTgSaving] = useState(false);
+  const [tgError, setTgError] = useState<string | null>(null);
+  const [tgSaved, setTgSaved] = useState(false);
+  const [tgVerified, setTgVerified] = useState(false);
+  const [tgLoaded, setTgLoaded] = useState(false);
+  const tgInputRef = useRef<HTMLInputElement>(null);
+
   // ── Signature state ────────────────────────────────────────────────────────
   const [sigEnabled, setSigEnabled] = useState(false);
   const [sigEditing, setSigEditing] = useState(false);
@@ -147,7 +159,7 @@ export default function AccountProfile() {
   const [sigSaved, setSigSaved] = useState(false);
   const sigTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // ── Load from Clerk + localStorage on mount ────────────────────────────────
+  // ── Load from Clerk + localStorage + backend on mount ──────────────────────
   useEffect(() => {
     if (!user) return;
 
@@ -160,6 +172,21 @@ export default function AccountProfile() {
     setSigValue(storedSig);
     setSigDraft(storedSig);
     setSigEnabled(storedEnabled);
+
+    // Fetch agent profile (telegram handle) from the support-bot backend
+    api.getProfile()
+      .then((data: { agent: { telegram_handle?: string; telegram_verified?: boolean } | null }) => {
+        const handle = data?.agent?.telegram_handle ?? "";
+        setTgValue(handle);
+        setTgDraft(handle);
+        setTgVerified(Boolean(data?.agent?.telegram_verified));
+      })
+      .catch(() => {
+        // If the user isn't yet an agent, the endpoint returns {agent: null}.
+        // apiFetch only throws on non-2xx, so failure here means the proxy or
+        // backend is unreachable — fall back to empty state.
+      })
+      .finally(() => setTgLoaded(true));
   }, [user]);
 
   // Auto-focus username input when editing starts
@@ -175,6 +202,13 @@ export default function AccountProfile() {
       sigTextareaRef.current?.focus();
     }
   }, [sigEditing]);
+
+  // Auto-focus telegram input when editing starts
+  useEffect(() => {
+    if (tgEditing) {
+      tgInputRef.current?.focus();
+    }
+  }, [tgEditing]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -206,6 +240,62 @@ export default function AccountProfile() {
       setUsernameError(message);
     } finally {
       setUsernameSaving(false);
+    }
+  }
+
+  // ── Telegram handle handlers ───────────────────────────────────────────────
+
+  function handleTgEdit() {
+    setTgDraft(tgValue);
+    setTgError(null);
+    setTgSaved(false);
+    setTgEditing(true);
+  }
+
+  function handleTgCancel() {
+    setTgEditing(false);
+    setTgError(null);
+    setTgDraft(tgValue);
+  }
+
+  async function handleTgSave() {
+    const cleaned = tgDraft.trim().replace(/^@+/, "");
+    if (!cleaned) {
+      setTgError("Telegram handle cannot be empty.");
+      return;
+    }
+    if (!/^[A-Za-z0-9_]{5,32}$/.test(cleaned)) {
+      setTgError("Use 5–32 letters, numbers, or underscores (no @).");
+      return;
+    }
+
+    setTgSaving(true);
+    setTgError(null);
+    try {
+      const data = await api.updateProfile({ telegram_handle: cleaned }) as {
+        agent: { telegram_handle: string; telegram_verified: boolean };
+      };
+      const newHandle = data.agent.telegram_handle ?? cleaned;
+      setTgValue(newHandle);
+      setTgDraft(newHandle);
+      setTgVerified(Boolean(data.agent.telegram_verified));
+      setTgEditing(false);
+      setTgSaved(true);
+      setTimeout(() => setTgSaved(false), 3000);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save Telegram handle.";
+      // Try to extract a friendlier message if the API response had detail
+      const friendly = message.includes("API error 409")
+        ? "That Telegram handle is already taken by another team member."
+        : message.includes("API error 403")
+        ? "You're not a team member yet — accept your invite first."
+        : message.includes("API error 400")
+        ? "Invalid Telegram handle. Use 5–32 letters, numbers, or underscores."
+        : message;
+      setTgError(friendly);
+    } finally {
+      setTgSaving(false);
     }
   }
 
@@ -355,6 +445,61 @@ export default function AccountProfile() {
               <VerifiedBadge />
             </div>
           </div>
+
+          {/* ── Telegram handle row ───────────────────────────────────────── */}
+          <div className="flex items-center justify-between gap-4 min-h-[36px]">
+            <span className="text-sm text-gray-400 flex-shrink-0 w-32">Telegram handle</span>
+
+            {tgEditing ? (
+              <div className="flex flex-1 items-center gap-2 justify-end">
+                <div className="flex flex-1 items-center min-w-0 rounded-lg border border-gray-700 bg-gray-950 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+                  <span className="pl-3 pr-1 text-sm text-gray-500 select-none">@</span>
+                  <input
+                    ref={tgInputRef}
+                    type="text"
+                    value={tgDraft}
+                    onChange={(e) => setTgDraft(e.target.value.replace(/^@+/, ""))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleTgSave();
+                      if (e.key === "Escape") handleTgCancel();
+                    }}
+                    placeholder="your_handle"
+                    className="flex-1 min-w-0 bg-transparent py-1.5 pr-3 text-sm text-white placeholder-gray-600 focus:outline-none"
+                  />
+                </div>
+                <ActionButton
+                  onClick={handleTgSave}
+                  disabled={tgSaving}
+                  variant="primary"
+                >
+                  {tgSaving ? "Saving…" : "Save"}
+                </ActionButton>
+                <ActionButton onClick={handleTgCancel} disabled={tgSaving}>
+                  Cancel
+                </ActionButton>
+              </div>
+            ) : (
+              <div className="flex flex-1 items-center gap-2 justify-end">
+                {tgSaved ? (
+                  <span className="text-sm text-green-400">Saved!</span>
+                ) : tgValue ? (
+                  <>
+                    <span className="text-sm text-white truncate">@{tgValue}</span>
+                    {tgVerified && <VerifiedBadge />}
+                  </>
+                ) : (
+                  <span className="text-sm text-gray-500 italic">
+                    {tgLoaded ? "Not set" : "Loading…"}
+                  </span>
+                )}
+                <ActionButton onClick={handleTgEdit} disabled={!tgLoaded}>Edit</ActionButton>
+              </div>
+            )}
+          </div>
+
+          {tgError && (
+            <p className="text-xs text-red-400 text-right -mt-2">{tgError}</p>
+          )}
         </div>
       </Card>
 

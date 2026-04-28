@@ -114,9 +114,10 @@ export const api = {
   rejectButton:         (id: number) => apiFetch(`/api/button-suggestions/${id}/reject`,  { method: "POST" }),
   runButtonAnalysis:    ()           => apiFetch("/api/admin/run-button-analysis", { method: "POST" }),
 
-  // Profile (signature stored locally, username via Clerk — these backend calls are wired for future use)
+  // Profile — Clerk owns email + username. Backend owns telegram_handle (mapped to agent.username).
+  // Signature is stored client-side in localStorage.
   getProfile: () => apiFetch("/api/profile"),
-  updateProfile: (body: { username?: string; signature?: string }) =>
+  updateProfile: (body: { telegram_handle?: string }) =>
     apiFetch("/api/profile", { method: "PUT", body: JSON.stringify(body) }),
 
   // Invites
