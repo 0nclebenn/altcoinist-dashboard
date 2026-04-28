@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import Sidebar from "@/components/Sidebar";
+import { RoleProvider } from "@/contexts/RoleContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,10 +16,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en">
         <body className={`${inter.className} bg-gray-950 text-gray-100`}>
-          <div className="flex h-screen overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 ml-56 overflow-auto">{children}</main>
-          </div>
+          <RoleProvider>
+            <div className="flex h-screen overflow-hidden">
+              <Sidebar />
+              <main className="flex-1 ml-14 overflow-auto">{children}</main>
+            </div>
+          </RoleProvider>
         </body>
       </html>
     </ClerkProvider>

@@ -2,21 +2,24 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
-import TeamManager from "@/components/TeamManager";
+import { useRole } from "@/contexts/RoleContext";
+import AccountProfile from "@/components/AccountProfile";
+import ManageTeam from "@/components/ManageTeam";
 import KBEditor from "@/components/KBEditor";
 import KBSuggestions from "@/components/KBSuggestions";
 import DocUpdateSuggestions from "@/components/DocUpdateSuggestions";
 import ButtonSuggestions from "@/components/ButtonSuggestions";
 
-const TABS = ["Team", "Knowledge Base", "Bot Flow"] as const;
+const TABS = ["Account", "Workspace", "Knowledge Base", "Bot Flow"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("Team");
+  const { currentRole, currentAgent, loading: roleLoading } = useRole();
 
-  // Team data
-  const [agents, setAgents] = useState<any[]>([]);
-  const [agentsLoaded, setAgentsLoaded] = useState(false);
+  const visibleTabs: readonly Tab[] =
+    currentRole === "moderator" ? (["Account"] as const) : TABS;
+
+  const [activeTab, setActiveTab] = useState<Tab>("Account");
 
   // KB data
   const [replies, setReplies] = useState<any[]>([]);
@@ -29,12 +32,6 @@ export default function SettingsPage() {
   const [flowLoaded, setFlowLoaded] = useState(false);
 
   useEffect(() => {
-    if (activeTab === "Team" && !agentsLoaded) {
-      api.agents()
-        .then((d: any) => setAgents(d.agents ?? []))
-        .catch(() => {})
-        .finally(() => setAgentsLoaded(true));
-    }
     if (activeTab === "Knowledge Base" && !kbLoaded) {
       Promise.all([api.scriptedReplies(), api.kbSuggestions(), api.docUpdateSuggestions()])
         .then(([r, s, d]: any[]) => {
@@ -51,7 +48,7 @@ export default function SettingsPage() {
         .catch(() => {})
         .finally(() => setFlowLoaded(true));
     }
-  }, [activeTab, agentsLoaded, kbLoaded, flowLoaded]);
+  }, [activeTab, kbLoaded, flowLoaded]);
 
   const reloadButtonSuggestions = useCallback(() => {
     api.buttonSuggestions()
@@ -59,12 +56,20 @@ export default function SettingsPage() {
       .catch(() => {});
   }, []);
 
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-gray-500 text-sm">Loading…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full p-8">
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
       <div className="flex gap-1 border-b border-gray-800 mb-8">
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -79,10 +84,13 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {activeTab === "Team" && (
-        agentsLoaded
-          ? <TeamManager initialAgents={agents} />
-          : <p className="text-gray-500 text-sm">Loading…</p>
+      {activeTab === "Account" && <AccountProfile />}
+
+      {activeTab === "Workspace" && (
+        <ManageTeam
+          currentRole={currentRole}
+          currentAgent={currentAgent}
+        />
       )}
 
       {activeTab === "Knowledge Base" && (

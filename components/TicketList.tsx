@@ -59,6 +59,7 @@ export default function TicketList({ activeView, activeTicketId, onSelect, refre
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   useEffect(() => {
     if (!activeView) return;
@@ -72,6 +73,11 @@ export default function TicketList({ activeView, activeTicketId, onSelect, refre
       .finally(() => setLoading(false));
   }, [activeView, refreshSignal]);
 
+  const sorted = [...tickets].sort((a, b) => {
+    const diff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    return sortOrder === "newest" ? diff : -diff;
+  });
+
   if (!activeView) {
     return (
       <div className="w-72 flex-shrink-0 border-r border-gray-800 flex items-center justify-center text-gray-600 text-sm bg-gray-900/50">
@@ -82,10 +88,21 @@ export default function TicketList({ activeView, activeTicketId, onSelect, refre
 
   return (
     <div className="w-72 flex-shrink-0 border-r border-gray-800 flex flex-col h-full bg-gray-900/50">
-      <div className="px-4 py-3 border-b border-gray-800">
-        <p className="text-xs text-gray-500">
+      <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between gap-2">
+        <p className="text-xs text-gray-500 truncate">
           {activeView.name} · <span className="text-gray-400">{total} ticket{total !== 1 ? "s" : ""}</span>
         </p>
+        <button
+          onClick={() => setSortOrder((s) => (s === "newest" ? "oldest" : "newest"))}
+          className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0 border border-gray-700 hover:border-gray-500 rounded px-1.5 py-0.5"
+          title={sortOrder === "newest" ? "Sorted: newest first" : "Sorted: oldest first"}
+        >
+          {sortOrder === "newest" ? (
+            <>↓ Newest</>
+          ) : (
+            <>↑ Oldest</>
+          )}
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -93,7 +110,7 @@ export default function TicketList({ activeView, activeTicketId, onSelect, refre
         {!loading && tickets.length === 0 && (
           <p className="px-4 py-3 text-xs text-gray-600">No tickets in this view.</p>
         )}
-        {tickets.map((t) => (
+        {sorted.map((t) => (
           <button
             key={t.id}
             onClick={() => onSelect(t)}

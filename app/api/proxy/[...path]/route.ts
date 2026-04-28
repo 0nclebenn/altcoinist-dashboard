@@ -12,14 +12,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
+const API_KEY = process.env.API_KEY || "";
 
 async function handle(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await context.params;
-  const backendUrl = `${BACKEND}/${path.join("/")}`;
+  const search = request.nextUrl.search; // includes leading "?" or ""
+  const backendUrl = `${BACKEND}/${path.join("/")}${search}`;
 
   const isBodyMethod = !["GET", "HEAD"].includes(request.method);
   const body = isBodyMethod ? await request.text() : undefined;

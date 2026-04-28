@@ -39,8 +39,35 @@ export type TicketFilters = {
   limit?: number;
 };
 
+export type Role = "super_admin" | "admin" | "moderator";
+
+export interface AgentMember {
+  id?: string;
+  username: string;
+  email?: string;
+  display_name?: string;
+  role: Role;
+  avatar?: string;
+}
+
+export interface Invite {
+  id: string;
+  email: string;
+  role: "admin" | "moderator";
+  invited_by: string;
+  status: "pending" | "accepted" | "declined";
+  created_at: string;
+  type: "invite" | "ownership_transfer";
+}
+
 export const api = {
-  stats:          ()                          => apiFetch("/api/stats"),
+  stats:          (params?: { from?: string; to?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
+    const qs = q.toString();
+    return apiFetch(`/api/stats${qs ? `?${qs}` : ""}`);
+  },
   tickets:        (filters: TicketFilters = {}) => {
     const q = new URLSearchParams();
     if (filters.status)          q.set("status",          filters.status);
@@ -58,7 +85,13 @@ export const api = {
   replyTicket:    (id: number, text: string) => apiFetch(`/api/tickets/${id}/reply`, { method: "POST", body: JSON.stringify({ text }) }),
   scriptedReplies:()                         => apiFetch("/api/scripted-replies"),
   updateReply:    (id: number, body: object) => apiFetch(`/api/scripted-replies/${id}`, { method: "PUT", body: JSON.stringify(body) }),
-  analytics:      ()                         => apiFetch("/api/analytics"),
+  analytics:      (params?: { from?: string; to?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
+    const qs = q.toString();
+    return apiFetch(`/api/analytics${qs ? `?${qs}` : ""}`);
+  },
   agents:           ()                         => apiFetch("/api/agents"),
   addAgent:         (body: object)             => apiFetch("/api/agents", { method: "POST", body: JSON.stringify(body) }),
   removeAgent:      (username: string)         => apiFetch(`/api/agents/${username}`, { method: "DELETE" }),
@@ -80,4 +113,25 @@ export const api = {
   approveButton:        (id: number) => apiFetch(`/api/button-suggestions/${id}/approve`, { method: "POST" }),
   rejectButton:         (id: number) => apiFetch(`/api/button-suggestions/${id}/reject`,  { method: "POST" }),
   runButtonAnalysis:    ()           => apiFetch("/api/admin/run-button-analysis", { method: "POST" }),
+
+  // Profile (signature stored locally, username via Clerk — these backend calls are wired for future use)
+  getProfile: () => apiFetch("/api/profile"),
+  updateProfile: (body: { username?: string; signature?: string }) =>
+    apiFetch("/api/profile", { method: "PUT", body: JSON.stringify(body) }),
+
+  // Invites
+  listInvites: () => apiFetch("/api/invites"),
+  sendInvite: (body: { email: string; role: "admin" | "moderator" }) =>
+    apiFetch("/api/invites", { method: "POST", body: JSON.stringify(body) }),
+  cancelInvite: (id: string) => apiFetch(`/api/invites/${id}`, { method: "DELETE" }),
+
+  // Ownership transfer
+  transferOwnership: (toEmail: string) =>
+    apiFetch("/api/invites/transfer-ownership", { method: "POST", body: JSON.stringify({ email: toEmail }) }),
+  cancelOwnershipTransfer: (id: string) =>
+    apiFetch(`/api/invites/transfer-ownership/${id}`, { method: "DELETE" }),
+
+  // Agent role management
+  updateAgentRole: (username: string, role: Role) =>
+    apiFetch(`/api/agents/${username}/role`, { method: "PUT", body: JSON.stringify({ role }) }),
 };
