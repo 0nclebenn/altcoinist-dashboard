@@ -33,19 +33,34 @@ export default function TicketViewsSidebar({ activeViewId, onSelect, onNewView, 
       return;
     }
     setBusyId(view.id);
+    let deleteError: unknown = null;
     try {
       await api.deleteTicketView(view.id);
-      const remaining = views.filter((v) => v.id !== view.id);
-      setViews(remaining);
-      if (activeViewId === view.id && onDeleted) {
-        onDeleted(view.id, remaining[0] ?? null);
-      }
-    } catch {
-      // Leave the view in place; user can retry
-    } finally {
-      setBusyId(null);
-      setConfirmId(null);
+    } catch (err) {
+      deleteError = err;
+      console.error("Failed to delete view", view.id, err);
     }
+
+    // Refetch from server — source of truth. If the backend deleted but the
+    // proxy mangled the response, the view is gone and refetch will reflect it.
+    let latest: TicketView[] = views;
+    try {
+      latest = await api.ticketViews();
+      setViews(latest);
+    } catch (err) {
+      console.error("Failed to refetch views after delete", err);
+    }
+
+    const stillPresent = latest.some((v) => v.id === view.id);
+    if (!stillPresent && activeViewId === view.id && onDeleted) {
+      onDeleted(view.id, latest[0] ?? null);
+    } else if (stillPresent && deleteError) {
+      // Backend kept the view AND we have an error — surface it
+      alert("Could not delete view. Try again.");
+    }
+
+    setBusyId(null);
+    setConfirmId(null);
   }
 
   return (

@@ -54,6 +54,11 @@ async function handle(
     ...(body ? { body } : {}),
   });
 
+  // 204 No Content must not have a body (HTTP spec).
+  if (res.status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   const data = await res.json().catch(() => ({}));
   return NextResponse.json(data, { status: res.status });
 }
