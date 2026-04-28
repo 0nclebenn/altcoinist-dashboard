@@ -57,6 +57,11 @@ function TicketsContent() {
         activeViewId={activeView?.id ?? null}
         onSelect={handleViewSelect}
         onNewView={() => setShowCreateModal(true)}
+        onDeleted={(_deletedId, fallback) => {
+          setActiveView(fallback);
+          setActiveTicketId(null);
+          pushURL(fallback, null);
+        }}
         refreshSignal={viewRefresh}
       />
 
