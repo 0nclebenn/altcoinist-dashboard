@@ -257,12 +257,16 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
   // ── Delete member ─────────────────────────────────────────────────────────
 
   async function handleDeleteMember(username: string) {
-    if (!window.confirm(`Remove @${username} from the team?`)) return;
     setDeleting((prev) => ({ ...prev, [username]: true }));
     try {
       await api.removeAgent(username);
+      const removingSelf = username === currentAgent?.username;
       setMembers((prev) => prev.filter((m) => m.username !== username));
       await refetchAgents();
+      if (removingSelf) {
+        // Self-remove: Clerk user deleted server-side; force reload to /sign-in to clear session
+        window.location.href = "/sign-in";
+      }
     } catch {
       // Silently ignore — member stays in list
     } finally {
@@ -292,12 +296,13 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
 
   function canEditMember(target: AgentMember): boolean {
     if (currentRole === "super_admin") {
-      // Can edit everyone except themselves (they get Transfer Ownership instead)
+      // Owner can edit everyone EXCEPT themselves (they get Transfer Ownership instead).
       return target.username !== currentAgent?.username;
     }
     if (currentRole === "admin") {
-      // Can edit admins and moderators, but NOT super_admin and NOT themselves
-      return target.role !== "super_admin" && target.username !== currentAgent?.username;
+      // Admins can edit other admins, moderators, AND themselves (self-demote / self-remove).
+      // They cannot edit the owner.
+      return target.role !== "super_admin";
     }
     return false;
   }
@@ -568,7 +573,14 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                     {/* Editable member: delete button — never on owner */}
                     {isEditable && member.role !== "super_admin" && (
                       <button
-                        onClick={() => handleDeleteMember(member.username)}
+                        onClick={() => {
+                          const isSelfRemoval = isSelf(member);
+                          const msg = isSelfRemoval
+                            ? "Remove yourself from the team? You will be signed out and lose access. You'd need to be re-invited to return."
+                            : `Remove @${member.username} from the team?`;
+                          if (!window.confirm(msg)) return;
+                          handleDeleteMember(member.username);
+                        }}
                         disabled={isDeleting}
                         className="text-red-400 hover:text-red-300 text-xs disabled:opacity-40 transition-colors"
                       >

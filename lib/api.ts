@@ -94,7 +94,20 @@ export const api = {
   },
   agents:           ()                         => apiFetch("/api/agents"),
   addAgent:         (body: object)             => apiFetch("/api/agents", { method: "POST", body: JSON.stringify(body) }),
-  removeAgent:      (username: string)         => apiFetch(`/api/agents/${username}`, { method: "DELETE" }),
+  // removeAgent uses the orchestrator route (deletes Clerk user + DB agent + cancels pending invites)
+  removeAgent: async (username: string) => {
+    const res = await fetch(`/api/team/remove/${encodeURIComponent(username)}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.detail ?? `API error ${res.status}: /api/team/remove/${username}`);
+    }
+    if (res.status === 204) return;
+    return res.json();
+  },
   kbSuggestions:    ()                         => apiFetch("/api/kb-suggestions"),
   approveSuggestion:(id: number)               => apiFetch(`/api/kb-suggestions/${id}/approve`, { method: "POST" }),
   rejectSuggestion: (id: number)               => apiFetch(`/api/kb-suggestions/${id}/reject`,  { method: "POST" }),
