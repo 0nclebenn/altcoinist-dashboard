@@ -4,34 +4,6 @@ import { useUser } from "@clerk/nextjs";
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 
-// ── Toggle Switch ────────────────────────────────────────────────────────────
-
-function ToggleSwitch({
-  enabled,
-  onChange,
-}: {
-  enabled: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
-        enabled ? "bg-blue-600" : "bg-gray-700"
-      }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-          enabled ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
-  );
-}
-
 // ── Avatar ───────────────────────────────────────────────────────────────────
 
 function Avatar({ imageUrl, initials }: { imageUrl?: string; initials: string }) {
@@ -39,6 +11,7 @@ function Avatar({ imageUrl, initials }: { imageUrl?: string; initials: string })
 
   if (imageUrl && !imgError) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={imageUrl}
         alt="Profile avatar"
@@ -129,119 +102,63 @@ function ActionButton({
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
+interface ProfileResponse {
+  agent: {
+    email?: string;
+    telegram_handle?: string;
+    telegram_verified?: boolean;
+    signature?: string | null;
+  } | null;
+}
+
 export default function AccountProfile() {
   const { user, isLoaded } = useUser();
 
-  // ── Username state ─────────────────────────────────────────────────────────
-  const [usernameEditing, setUsernameEditing] = useState(false);
-  const [usernameValue, setUsernameValue] = useState("");
-  const [usernameSaving, setUsernameSaving] = useState(false);
-  const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [usernameSuccess, setUsernameSuccess] = useState(false);
-  const usernameInputRef = useRef<HTMLInputElement>(null);
-
   // ── Telegram handle state (backed by agent.username on the support bot) ───
-  const [tgValue, setTgValue] = useState("");           // saved value from backend
-  const [tgDraft, setTgDraft] = useState("");           // current input
+  const [tgValue, setTgValue] = useState("");
+  const [tgDraft, setTgDraft] = useState("");
   const [tgEditing, setTgEditing] = useState(false);
   const [tgSaving, setTgSaving] = useState(false);
   const [tgError, setTgError] = useState<string | null>(null);
   const [tgSaved, setTgSaved] = useState(false);
   const [tgVerified, setTgVerified] = useState(false);
-  const [tgLoaded, setTgLoaded] = useState(false);
   const tgInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Signature state ────────────────────────────────────────────────────────
-  const [sigEnabled, setSigEnabled] = useState(false);
-  const [sigEditing, setSigEditing] = useState(false);
+  // ── Signature state (backed by agent.signature on the support bot) ────────
   const [sigValue, setSigValue] = useState("");
   const [sigDraft, setSigDraft] = useState("");
+  const [sigEditing, setSigEditing] = useState(false);
+  const [sigSaving, setSigSaving] = useState(false);
+  const [sigError, setSigError] = useState<string | null>(null);
   const [sigSaved, setSigSaved] = useState(false);
-  const sigTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const sigInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Load from Clerk + localStorage + backend on mount ──────────────────────
+  const [profileLoaded, setProfileLoaded] = useState(false);
+
+  // ── Load profile on mount ──────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
 
-    setUsernameValue(user.username ?? "");
-
-    const storedSig = localStorage.getItem(`altcoinist_signature_${user.id}`) ?? "";
-    const storedEnabled =
-      localStorage.getItem(`altcoinist_signature_enabled_${user.id}`) === "true";
-
-    setSigValue(storedSig);
-    setSigDraft(storedSig);
-    setSigEnabled(storedEnabled);
-
-    // Fetch agent profile (telegram handle) from the support-bot backend
     api.getProfile()
-      .then((data: { agent: { telegram_handle?: string; telegram_verified?: boolean } | null }) => {
-        const handle = data?.agent?.telegram_handle ?? "";
-        setTgValue(handle);
-        setTgDraft(handle);
-        setTgVerified(Boolean(data?.agent?.telegram_verified));
+      .then((data) => {
+        const agent = (data as ProfileResponse)?.agent;
+        if (agent) {
+          const handle = agent.telegram_handle ?? "";
+          setTgValue(handle);
+          setTgDraft(handle);
+          setTgVerified(Boolean(agent.telegram_verified));
+
+          const sig = agent.signature ?? "";
+          setSigValue(sig);
+          setSigDraft(sig);
+        }
       })
-      .catch(() => {
-        // If the user isn't yet an agent, the endpoint returns {agent: null}.
-        // apiFetch only throws on non-2xx, so failure here means the proxy or
-        // backend is unreachable — fall back to empty state.
-      })
-      .finally(() => setTgLoaded(true));
+      .catch(() => { /* user may not be an agent yet — leave defaults */ })
+      .finally(() => setProfileLoaded(true));
   }, [user]);
 
-  // Auto-focus username input when editing starts
-  useEffect(() => {
-    if (usernameEditing) {
-      usernameInputRef.current?.focus();
-    }
-  }, [usernameEditing]);
-
-  // Auto-focus signature textarea when editing starts
-  useEffect(() => {
-    if (sigEditing) {
-      sigTextareaRef.current?.focus();
-    }
-  }, [sigEditing]);
-
-  // Auto-focus telegram input when editing starts
-  useEffect(() => {
-    if (tgEditing) {
-      tgInputRef.current?.focus();
-    }
-  }, [tgEditing]);
-
-  // ── Handlers ───────────────────────────────────────────────────────────────
-
-  function handleUsernameEdit() {
-    setUsernameValue(user?.username ?? "");
-    setUsernameError(null);
-    setUsernameSuccess(false);
-    setUsernameEditing(true);
-  }
-
-  function handleUsernameCancel() {
-    setUsernameEditing(false);
-    setUsernameError(null);
-  }
-
-  async function handleUsernameSave() {
-    if (!user) return;
-    setUsernameSaving(true);
-    setUsernameError(null);
-    setUsernameSuccess(false);
-    try {
-      await user.update({ username: usernameValue.trim() });
-      setUsernameEditing(false);
-      setUsernameSuccess(true);
-      setTimeout(() => setUsernameSuccess(false), 3000);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to update username.";
-      setUsernameError(message);
-    } finally {
-      setUsernameSaving(false);
-    }
-  }
+  useEffect(() => { if (tgEditing)  tgInputRef.current?.focus();  }, [tgEditing]);
+  useEffect(() => { if (sigEditing) sigInputRef.current?.focus(); }, [sigEditing]);
 
   // ── Telegram handle handlers ───────────────────────────────────────────────
 
@@ -260,10 +177,7 @@ export default function AccountProfile() {
 
   async function handleTgSave() {
     const cleaned = tgDraft.trim().replace(/^@+/, "");
-    if (!cleaned) {
-      setTgError("Telegram handle cannot be empty.");
-      return;
-    }
+    if (!cleaned) { setTgError("Telegram handle cannot be empty."); return; }
     if (!/^[A-Za-z0-9_]{5,32}$/.test(cleaned)) {
       setTgError("Use 5–32 letters, numbers, or underscores (no @).");
       return;
@@ -272,20 +186,16 @@ export default function AccountProfile() {
     setTgSaving(true);
     setTgError(null);
     try {
-      const data = await api.updateProfile({ telegram_handle: cleaned }) as {
-        agent: { telegram_handle: string; telegram_verified: boolean };
-      };
-      const newHandle = data.agent.telegram_handle ?? cleaned;
+      const data = await api.updateProfile({ telegram_handle: cleaned }) as ProfileResponse;
+      const newHandle = data.agent?.telegram_handle ?? cleaned;
       setTgValue(newHandle);
       setTgDraft(newHandle);
-      setTgVerified(Boolean(data.agent.telegram_verified));
+      setTgVerified(Boolean(data.agent?.telegram_verified));
       setTgEditing(false);
       setTgSaved(true);
       setTimeout(() => setTgSaved(false), 3000);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save Telegram handle.";
-      // Try to extract a friendlier message if the API response had detail
+      const message = err instanceof Error ? err.message : "Failed to save Telegram handle.";
       const friendly = message.includes("API error 409")
         ? "That Telegram handle is already taken by another team member."
         : message.includes("API error 403")
@@ -299,26 +209,51 @@ export default function AccountProfile() {
     }
   }
 
-  function handleSigToggle(v: boolean) {
-    setSigEnabled(v);
-    if (user) {
-      localStorage.setItem(`altcoinist_signature_enabled_${user.id}`, String(v));
-    }
-  }
+  // ── Signature handlers ─────────────────────────────────────────────────────
 
   function handleSigEdit() {
     setSigDraft(sigValue);
-    setSigEditing(true);
+    setSigError(null);
     setSigSaved(false);
+    setSigEditing(true);
   }
 
-  function handleSigSave() {
-    if (!user) return;
-    setSigValue(sigDraft);
-    localStorage.setItem(`altcoinist_signature_${user.id}`, sigDraft);
+  function handleSigCancel() {
     setSigEditing(false);
-    setSigSaved(true);
-    setTimeout(() => setSigSaved(false), 3000);
+    setSigError(null);
+    setSigDraft(sigValue);
+  }
+
+  async function handleSigSave() {
+    const cleaned = sigDraft.trim();
+    if (cleaned.length > 0 && (cleaned.length < 2 || cleaned.length > 50)) {
+      setSigError("Signature must be 2–50 characters.");
+      return;
+    }
+
+    setSigSaving(true);
+    setSigError(null);
+    try {
+      const data = await api.updateProfile({ signature: cleaned }) as ProfileResponse;
+      const newSig = data.agent?.signature ?? "";
+      setSigValue(newSig);
+      setSigDraft(newSig);
+      setSigEditing(false);
+      setSigSaved(true);
+      setTimeout(() => setSigSaved(false), 3000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save signature.";
+      const friendly = message.includes("API error 409")
+        ? "Signature already exists. Choose a different one."
+        : message.includes("API error 403")
+        ? "You're not a team member yet — accept your invite first."
+        : message.includes("API error 400")
+        ? "Signature must be 2–50 characters."
+        : message;
+      setSigError(friendly);
+    } finally {
+      setSigSaving(false);
+    }
   }
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -352,30 +287,24 @@ export default function AccountProfile() {
     );
   }
 
-  // ── Derive initials ────────────────────────────────────────────────────────
   const displayName =
-    user.fullName ??
-    user.username ??
-    user.primaryEmailAddress?.emailAddress ??
-    "?";
+    user.fullName ?? user.username ?? user.primaryEmailAddress?.emailAddress ?? "?";
   const initials = displayName
     .split(/\s+/)
     .map((w) => w[0]?.toUpperCase() ?? "")
     .slice(0, 2)
     .join("");
 
-  const currentUsername = user.username ?? null;
   const email = user.primaryEmailAddress?.emailAddress ?? "";
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-2xl space-y-6">
-      {/* ── Account & Login ───────────────────────────────────────────────── */}
+      {/* ── Account & Login ────────────────────────────────────────────────── */}
       <Card>
         <CardTitle>Account &amp; Login</CardTitle>
 
-        {/* Avatar + upload hint */}
         <div className="flex items-center gap-5 mb-6">
           <Avatar imageUrl={user.imageUrl} initials={initials} />
           <div>
@@ -387,57 +316,7 @@ export default function AccountProfile() {
         </div>
 
         <div className="space-y-4">
-          {/* ── Username row ───────────────────────────────────────────────── */}
-          <div className="flex items-center justify-between gap-4 min-h-[36px]">
-            <span className="text-sm text-gray-400 flex-shrink-0 w-32">Username</span>
-
-            {usernameEditing ? (
-              <div className="flex flex-1 items-center gap-2 justify-end">
-                <input
-                  ref={usernameInputRef}
-                  type="text"
-                  value={usernameValue}
-                  onChange={(e) => setUsernameValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleUsernameSave();
-                    if (e.key === "Escape") handleUsernameCancel();
-                  }}
-                  placeholder="Enter username"
-                  className="flex-1 min-w-0 rounded-lg border border-gray-700 bg-gray-950 px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <ActionButton
-                  onClick={handleUsernameSave}
-                  disabled={usernameSaving}
-                  variant="primary"
-                >
-                  {usernameSaving ? "Saving…" : "Save"}
-                </ActionButton>
-                <ActionButton onClick={handleUsernameCancel} disabled={usernameSaving}>
-                  Cancel
-                </ActionButton>
-              </div>
-            ) : (
-              <div className="flex flex-1 items-center gap-3 justify-end">
-                <span className="text-sm text-white truncate">
-                  {usernameSuccess ? (
-                    <span className="text-green-400">Saved!</span>
-                  ) : (
-                    currentUsername ?? (
-                      <span className="text-gray-500 italic">Not set</span>
-                    )
-                  )}
-                </span>
-                <ActionButton onClick={handleUsernameEdit}>Edit</ActionButton>
-              </div>
-            )}
-          </div>
-
-          {/* Username error */}
-          {usernameError && (
-            <p className="text-xs text-red-400 text-right -mt-2">{usernameError}</p>
-          )}
-
-          {/* ── Email row ─────────────────────────────────────────────────── */}
+          {/* Email */}
           <div className="flex items-center justify-between gap-4 min-h-[36px]">
             <span className="text-sm text-gray-400 flex-shrink-0 w-32">Email address</span>
             <div className="flex flex-1 items-center gap-2 justify-end">
@@ -446,7 +325,7 @@ export default function AccountProfile() {
             </div>
           </div>
 
-          {/* ── Telegram handle row ───────────────────────────────────────── */}
+          {/* Telegram handle */}
           <div className="flex items-center justify-between gap-4 min-h-[36px]">
             <span className="text-sm text-gray-400 flex-shrink-0 w-32">Telegram handle</span>
 
@@ -467,16 +346,10 @@ export default function AccountProfile() {
                     className="flex-1 min-w-0 bg-transparent py-1.5 pr-3 text-sm text-white placeholder-gray-600 focus:outline-none"
                   />
                 </div>
-                <ActionButton
-                  onClick={handleTgSave}
-                  disabled={tgSaving}
-                  variant="primary"
-                >
+                <ActionButton onClick={handleTgSave} disabled={tgSaving} variant="primary">
                   {tgSaving ? "Saving…" : "Save"}
                 </ActionButton>
-                <ActionButton onClick={handleTgCancel} disabled={tgSaving}>
-                  Cancel
-                </ActionButton>
+                <ActionButton onClick={handleTgCancel} disabled={tgSaving}>Cancel</ActionButton>
               </div>
             ) : (
               <div className="flex flex-1 items-center gap-2 justify-end">
@@ -489,10 +362,10 @@ export default function AccountProfile() {
                   </>
                 ) : (
                   <span className="text-sm text-gray-500 italic">
-                    {tgLoaded ? "Not set" : "Loading…"}
+                    {profileLoaded ? "Not set" : "Loading…"}
                   </span>
                 )}
-                <ActionButton onClick={handleTgEdit} disabled={!tgLoaded}>Edit</ActionButton>
+                <ActionButton onClick={handleTgEdit} disabled={!profileLoaded}>Edit</ActionButton>
               </div>
             )}
           </div>
@@ -505,64 +378,62 @@ export default function AccountProfile() {
 
       {/* ── Custom Signature ──────────────────────────────────────────────── */}
       <Card>
-        <div className="flex items-start justify-between gap-4 mb-1">
-          <CardTitle>Custom Signature</CardTitle>
-          <ToggleSwitch enabled={sigEnabled} onChange={handleSigToggle} />
-        </div>
+        <CardTitle>Custom Signature</CardTitle>
         <p className="text-xs text-gray-500 mb-5">
-          Enabling custom signatures helps users identify who they&apos;re speaking with.
+          Shown to users when you reply to their tickets. They&apos;ll see
+          &ldquo;Support team ({sigValue || "your_signature"}): …&rdquo; on every message you send.
+          Must be unique across the team.
         </p>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm text-gray-400">Signature</span>
-            {!sigEditing && (
-              <div className="flex items-center gap-2">
-                {sigSaved && (
-                  <span className="text-xs text-green-400">Saved!</span>
+          <div className="flex items-center justify-between gap-4 min-h-[36px]">
+            <span className="text-sm text-gray-400 flex-shrink-0 w-32">Signature</span>
+
+            {sigEditing ? (
+              <div className="flex flex-1 items-center gap-2 justify-end">
+                <input
+                  ref={sigInputRef}
+                  type="text"
+                  value={sigDraft}
+                  onChange={(e) => setSigDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSigSave();
+                    if (e.key === "Escape") handleSigCancel();
+                  }}
+                  placeholder="e.g. 0ncleben"
+                  maxLength={50}
+                  className="flex-1 min-w-0 rounded-lg border border-gray-700 bg-gray-950 px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <ActionButton onClick={handleSigSave} disabled={sigSaving} variant="primary">
+                  {sigSaving ? "Saving…" : "Save"}
+                </ActionButton>
+                <ActionButton onClick={handleSigCancel} disabled={sigSaving}>Cancel</ActionButton>
+              </div>
+            ) : (
+              <div className="flex flex-1 items-center gap-2 justify-end">
+                {sigSaved ? (
+                  <span className="text-sm text-green-400">Saved!</span>
+                ) : sigValue ? (
+                  <span className="text-sm text-white truncate">{sigValue}</span>
+                ) : (
+                  <span className="text-sm text-gray-500 italic">
+                    {profileLoaded ? "Not set" : "Loading…"}
+                  </span>
                 )}
-                <ActionButton onClick={handleSigEdit}>Edit</ActionButton>
+                <ActionButton onClick={handleSigEdit} disabled={!profileLoaded}>Edit</ActionButton>
               </div>
             )}
           </div>
 
-          {sigEditing ? (
-            <>
-              <textarea
-                ref={sigTextareaRef}
-                rows={2}
-                value={sigDraft}
-                onChange={(e) => setSigDraft(e.target.value)}
-                placeholder="e.g. Ben — Altcoinist Support"
-                className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white placeholder-gray-600 resize-none focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <div className="flex gap-2 justify-end">
-                <ActionButton variant="primary" onClick={handleSigSave}>
-                  Save
-                </ActionButton>
-                <ActionButton
-                  onClick={() => {
-                    setSigEditing(false);
-                    setSigDraft(sigValue);
-                  }}
-                >
-                  Cancel
-                </ActionButton>
-              </div>
-            </>
-          ) : (
-            <div className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 min-h-[56px]">
-              {sigValue ? (
-                <p className="text-sm text-white whitespace-pre-wrap">{sigValue}</p>
-              ) : (
-                <p className="text-sm text-gray-600 italic">No signature set</p>
-              )}
-            </div>
+          {sigError && (
+            <p className="text-xs text-red-400 text-right -mt-2">{sigError}</p>
           )}
 
-          <p className="text-xs text-orange-400">
-            This is how your signature will appear in messages
-          </p>
+          {sigValue && !sigEditing && (
+            <p className="text-xs text-gray-500 mt-3">
+              Preview: <span className="text-gray-300">💬 Support team ({sigValue}): &lt;your message&gt;</span>
+            </p>
+          )}
         </div>
       </Card>
     </div>

@@ -128,10 +128,9 @@ export const api = {
   runButtonAnalysis:    ()           => apiFetch("/api/admin/run-button-analysis", { method: "POST" }),
   flowTree:             ()           => apiFetch("/api/flow-tree"),
 
-  // Profile — Clerk owns email + username. Backend owns telegram_handle (mapped to agent.username).
-  // Signature is stored client-side in localStorage.
+  // Profile — Clerk owns email. Backend owns telegram_handle (agent.username) and signature.
   getProfile: () => apiFetch("/api/profile"),
-  updateProfile: (body: { telegram_handle?: string }) =>
+  updateProfile: (body: { telegram_handle?: string; signature?: string }) =>
     apiFetch("/api/profile", { method: "PUT", body: JSON.stringify(body) }),
 
   // Invites
