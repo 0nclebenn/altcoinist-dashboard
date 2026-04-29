@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { SignUp, useUser } from "@clerk/nextjs";
 
 type InviteInfo = {
   email: string;
@@ -14,6 +14,8 @@ type InviteInfo = {
 export default function AcceptInvitePage() {
   const params = useParams<{ token: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const clerkTicket = searchParams?.get("__clerk_ticket") ?? null;
   const { user, isLoaded: userLoaded } = useUser();
 
   const [invite, setInvite] = useState<InviteInfo | null>(null);
@@ -111,11 +113,33 @@ export default function AcceptInvitePage() {
     );
   }
 
-  // 3a. Not authenticated yet → redirect to Clerk's invitation URL (with __clerk_ticket).
-  // This is what unlocks sign-up in Restricted mode. After Clerk sign-up, Clerk
-  // redirects back to /invite/[token] (set as redirect_url when the invitation
-  // was created server-side).
+  // 3a. Not authenticated.
+  // Clerk's invitation URL is `/invite/[token]?__clerk_ticket=xyz` — visiting
+  // it lands us back here, but with the ticket as a query param. When that
+  // param is present, render <SignUp> which auto-detects the ticket and
+  // bypasses Restricted mode. Otherwise show a button that navigates to the
+  // ticketed URL.
   if (userLoaded && !user) {
+    if (clerkTicket) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-gray-300 p-6">
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-md w-full mb-6 text-center">
+            <h1 className="text-xl font-semibold text-white mb-2">
+              You've been invited to Altcoinist Support
+            </h1>
+            <p className="text-gray-400">
+              Create your account with <strong className="text-white">{invite.email}</strong> to
+              join as <strong className="text-white">{invite.role}</strong>.
+            </p>
+          </div>
+          <SignUp
+            forceRedirectUrl={`/invite/${params.token}`}
+            signInForceRedirectUrl={`/invite/${params.token}`}
+          />
+        </div>
+      );
+    }
+
     if (!invite.clerk_ticket_url) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-950 text-gray-300 p-6">
@@ -128,6 +152,7 @@ export default function AcceptInvitePage() {
         </div>
       );
     }
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-gray-300 p-6">
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-md w-full text-center">
