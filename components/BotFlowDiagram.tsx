@@ -227,17 +227,14 @@ export default function BotFlowDiagram() {
           const sugForParent = suggestionsByParent[state] ?? [];
           const hasButtons = fwd.length > 0;
 
-          // Title for non-root cards = label of the button that led here.
-          // Strip leading emoji so "🤖 Altcoinist Bot" → "Altcoinist Bot".
+          // Title for non-root cards = full button label that led here, emoji included.
           let title: string | undefined;
           if (!isFirst) {
             const parent = tree.nodes[path[i - 1]];
             const incomingBtn = parent
               ? parent.buttons.flat().find((b) => b.target === state)
               : undefined;
-            if (incomingBtn) {
-              title = incomingBtn.label.replace(/^[\p{Extended_Pictographic}‍️]+\s*/u, "").trim();
-            }
+            if (incomingBtn) title = incomingBtn.label.trim();
           }
 
           return (
