@@ -27,6 +27,16 @@ export default function AcceptInvitePage() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
+  // Auto-redirect unauthenticated visitors with no ticket query to Clerk's
+  // invitation URL. Eliminates the manual "Continue to sign up" click.
+  useEffect(() => {
+    if (!userLoaded) return;
+    if (user) return;
+    if (clerkTicket) return; // already on the SignUp branch
+    if (!invite?.clerk_ticket_url) return;
+    window.location.href = invite.clerk_ticket_url;
+  }, [userLoaded, user, clerkTicket, invite?.clerk_ticket_url]);
+
   // 1. Validate the token
   useEffect(() => {
     if (!params?.token) return;
@@ -115,10 +125,10 @@ export default function AcceptInvitePage() {
 
   // 3a. Not authenticated.
   // Clerk's invitation URL is `/invite/[token]?__clerk_ticket=xyz` — visiting
-  // it lands us back here, but with the ticket as a query param. When that
-  // param is present, render <SignUp> which auto-detects the ticket and
-  // bypasses Restricted mode. Otherwise show a button that navigates to the
-  // ticketed URL.
+  // it lands us back here, but with the ticket as a query param. When the
+  // ticket is present, render <SignUp> which auto-detects it and bypasses
+  // Restricted mode. When it's absent, auto-redirect to the stored Clerk
+  // ticket URL (no manual button click needed).
   if (userLoaded && !user) {
     if (clerkTicket) {
       return (
@@ -153,25 +163,26 @@ export default function AcceptInvitePage() {
       );
     }
 
+    // The redirect is fired by the useEffect at the top of the component.
+    // This UI is what the user briefly sees before the navigation happens,
+    // plus a manual fallback link if the auto-redirect is blocked.
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-gray-300 p-6">
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-md w-full text-center">
           <h1 className="text-xl font-semibold text-white mb-2">
             You've been invited to Altcoinist Support
           </h1>
-          <p className="text-gray-400 mb-6">
+          <p className="text-gray-400 mb-4">
             Joining as <strong className="text-white">{invite.role}</strong> with{" "}
             <strong className="text-white">{invite.email}</strong>.
           </p>
+          <p className="text-gray-500 text-sm mb-4">Redirecting to sign-up…</p>
           <a
             href={invite.clerk_ticket_url}
-            className="inline-block bg-violet-600 hover:bg-violet-700 text-white font-medium px-4 py-2 rounded transition"
+            className="text-violet-400 hover:text-violet-300 text-xs underline"
           >
-            Continue to sign up
+            Click here if it doesn't redirect automatically
           </a>
-          <p className="text-gray-500 text-xs mt-4">
-            You'll be redirected to create your account, then come back here to finish.
-          </p>
         </div>
       </div>
     );
