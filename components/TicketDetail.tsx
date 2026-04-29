@@ -18,6 +18,7 @@ interface TicketData {
     id: number;
     status: string;
     priority: string;
+    category: string | null;
     tags: string[];
     assigned_to: string | null;
     resolution_type: string | null;
@@ -140,6 +141,8 @@ export default function TicketDetail({ ticketId, onStatusChange }: Props) {
         <TicketActions
           ticketId={ticket.id}
           currentStatus={ticket.status}
+          currentPriority={ticket.priority}
+          currentCategory={ticket.category}
           assignedTo={ticket.assigned_to}
           onSave={handleSave}
         />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, TicketView } from "@/lib/api";
+import { useRole } from "@/contexts/RoleContext";
 
 interface Props {
   activeViewId: number | null;
@@ -11,9 +12,11 @@ interface Props {
   refreshSignal: number;
 }
 
-const PROTECTED_NAMES = new Set(["Open", "Escalated", "All"]);
+const PROTECTED_NAMES = new Set(["Open", "Escalated", "All", "My Tickets"]);
+const MY_TICKETS_VIEW_ID = -1;  // sentinel — virtual view not stored in DB
 
 export default function TicketViewsSidebar({ activeViewId, onSelect, onNewView, onDeleted, refreshSignal }: Props) {
+  const { currentAgent } = useRole();
   const [views, setViews] = useState<TicketView[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmId, setConfirmId] = useState<number | null>(null);
@@ -25,6 +28,22 @@ export default function TicketViewsSidebar({ activeViewId, onSelect, onNewView, 
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [refreshSignal]);
+
+  // Inject "My Tickets" at the top whenever we know the current agent's username.
+  // This view filters /api/tickets by assigned_to=<my username>. Lives only in
+  // the client; not stored in the DB (avoids per-agent seed bloat).
+  const allViews: TicketView[] = currentAgent?.username
+    ? [
+        {
+          id: MY_TICKETS_VIEW_ID,
+          name: "My Tickets",
+          filters: { assigned_to: currentAgent.username },
+          position: -1,
+          created_at: "",
+        },
+        ...views,
+      ]
+    : views;
 
   async function handleDelete(view: TicketView, e: React.MouseEvent) {
     e.stopPropagation();
@@ -71,8 +90,8 @@ export default function TicketViewsSidebar({ activeViewId, onSelect, onNewView, 
 
       <nav className="flex-1 overflow-y-auto">
         {loading && <p className="px-4 py-2 text-xs text-gray-600">Loading…</p>}
-        {views.map((view) => {
-          const protectedView = PROTECTED_NAMES.has(view.name);
+        {allViews.map((view) => {
+          const protectedView = PROTECTED_NAMES.has(view.name) || view.id === MY_TICKETS_VIEW_ID;
           const active = activeViewId === view.id;
           const confirming = confirmId === view.id;
           const busy = busyId === view.id;
