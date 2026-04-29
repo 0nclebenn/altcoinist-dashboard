@@ -233,7 +233,8 @@ export default function BotFlowDiagram() {
 
               {hasButtons && (
                 <>
-                  <Arrow />
+                  {/* Plain line into the rail — chevron would float in space */}
+                  <Arrow chevron={false} />
                   <ButtonRow
                     buttons={fwd}
                     selected={selectedNext}
@@ -243,7 +244,7 @@ export default function BotFlowDiagram() {
                     onReject={handleReject}
                     pendingActionId={pendingActionId}
                   />
-                  {/* Arrow into the next card only when one is selected */}
+                  {/* Chevron arrow into the next card only when one is selected */}
                   {!isLastInPath && <Arrow />}
                 </>
               )}
@@ -376,13 +377,15 @@ function NodeBadge({ color, children }: { color: "purple" | "orange" | "gray" | 
 // Arrow — vertical line + chevron
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Arrow() {
+function Arrow({ chevron = true }: { chevron?: boolean }) {
   return (
     <div className="flex flex-col items-center my-1.5" aria-hidden="true">
       <span className="block w-px h-5 bg-gray-700" />
-      <svg width="10" height="6" viewBox="0 0 10 6" className="text-gray-700 -mt-px">
-        <path d="M0 0 L5 6 L10 0" stroke="currentColor" strokeWidth="1.5" fill="none" />
-      </svg>
+      {chevron && (
+        <svg width="10" height="6" viewBox="0 0 10 6" className="text-gray-700 -mt-px">
+          <path d="M0 0 L5 6 L10 0" stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </svg>
+      )}
     </div>
   );
 }
@@ -408,47 +411,77 @@ function ButtonRow({
   onReject: (id: number) => void;
   pendingActionId: number | null;
 }) {
+  // Each "column" is the [+] icon or one of the buttons. Above each column we
+  // draw a half-rail on the left, a vertical drop, and a half-rail on the right.
+  // The first column hides its left half, the last hides its right — together
+  // they form a continuous horizontal rail with drops to each button head.
+  const columns: Array<{ kind: "plus" } | { kind: "btn"; b: FlowButton }> = [
+    { kind: "plus" },
+    ...buttons.map((b) => ({ kind: "btn" as const, b })),
+  ];
+
   return (
-    <div className="w-full max-w-2xl flex flex-col items-center gap-2">
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {/* "Add" placeholder — visual nod to Mava's [+] button */}
-        <span
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-700 bg-gray-900 text-gray-500 text-base"
-          title="Buttons here are added via Run analysis → Approve"
-        >
-          +
-        </span>
-        {buttons.map((b) => {
-          const isSelected = selected === b.target;
+    <div className="w-full max-w-2xl flex flex-col items-center">
+      {/* Branching connector + button heads */}
+      <div className="flex items-stretch justify-center">
+        {columns.map((col, i) => {
+          const isFirst = i === 0;
+          const isLast = i === columns.length - 1;
           return (
-            <button
-              key={`${b.target}-${b.label}`}
-              onClick={() => onClick(b.target)}
-              className={`inline-flex items-center gap-2 px-3 h-8 text-xs rounded-lg border transition-colors ${
-                isSelected
-                  ? "bg-indigo-600 border-indigo-500 text-white"
-                  : "bg-gray-900 border-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-800"
-              }`}
-            >
-              <DragHandle />
-              <span className="truncate max-w-[200px]">{b.label}</span>
-            </button>
+            <div key={i} className="flex flex-col items-center px-1.5">
+              <div className="flex items-start self-stretch">
+                <div className={`flex-1 h-px ${isFirst ? "bg-transparent" : "bg-gray-700"}`} />
+                <div className="w-px h-4 bg-gray-700" />
+                <div className={`flex-1 h-px ${isLast ? "bg-transparent" : "bg-gray-700"}`} />
+              </div>
+
+              {col.kind === "plus" ? (
+                <span
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-700 bg-gray-900 text-gray-500 text-base"
+                  title="Buttons are added via Run analysis → Approve"
+                >
+                  +
+                </span>
+              ) : (
+                <button
+                  onClick={() => onClick(col.b.target)}
+                  className={`inline-flex items-center gap-2 px-3 h-8 text-xs rounded-lg border transition-colors ${
+                    selected === col.b.target
+                      ? "bg-indigo-600 border-indigo-500 text-white"
+                      : "bg-gray-900 border-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-800"
+                  }`}
+                >
+                  <DragHandle />
+                  <span className="truncate max-w-[200px]">{col.b.label}</span>
+                </button>
+              )}
+            </div>
           );
         })}
       </div>
 
-      {/* Suggested buttons hanging off this row */}
+      {/* Pending suggestions below the row, also rail-connected to the parent */}
       {suggestions.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
-          {suggestions.map((s) => (
-            <SuggestionChip
-              key={s.id}
-              suggestion={s}
-              busy={pendingActionId === s.id}
-              onApprove={() => onApprove(s.id)}
-              onReject={() => onReject(s.id)}
-            />
-          ))}
+        <div className="mt-2 flex items-stretch justify-center">
+          {suggestions.map((s, i) => {
+            const isFirst = i === 0;
+            const isLast = i === suggestions.length - 1;
+            return (
+              <div key={s.id} className="flex flex-col items-center px-1.5">
+                <div className="flex items-start self-stretch">
+                  <div className={`flex-1 h-px ${isFirst ? "bg-transparent" : "bg-red-700/70"}`} />
+                  <div className="w-px h-4 bg-red-700/70" />
+                  <div className={`flex-1 h-px ${isLast ? "bg-transparent" : "bg-red-700/70"}`} />
+                </div>
+                <SuggestionChip
+                  suggestion={s}
+                  busy={pendingActionId === s.id}
+                  onApprove={() => onApprove(s.id)}
+                  onReject={() => onReject(s.id)}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
