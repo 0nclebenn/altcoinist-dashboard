@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useRole } from "@/contexts/RoleContext";
 import AccountProfile from "@/components/AccountProfile";
@@ -8,7 +8,7 @@ import ManageTeam from "@/components/ManageTeam";
 import KBEditor from "@/components/KBEditor";
 import KBSuggestions from "@/components/KBSuggestions";
 import DocUpdateSuggestions from "@/components/DocUpdateSuggestions";
-import ButtonSuggestions from "@/components/ButtonSuggestions";
+import BotFlowDiagram from "@/components/BotFlowDiagram";
 
 const TABS = ["Account", "Workspace", "Knowledge Base", "Bot Flow"] as const;
 type Tab = (typeof TABS)[number];
@@ -27,10 +27,6 @@ export default function SettingsPage() {
   const [docUpdates, setDocUpdates] = useState<any[]>([]);
   const [kbLoaded, setKbLoaded] = useState(false);
 
-  // Bot flow data
-  const [buttonSuggestions, setButtonSuggestions] = useState<any[]>([]);
-  const [flowLoaded, setFlowLoaded] = useState(false);
-
   useEffect(() => {
     if (activeTab === "Knowledge Base" && !kbLoaded) {
       Promise.all([api.scriptedReplies(), api.kbSuggestions(), api.docUpdateSuggestions()])
@@ -42,19 +38,7 @@ export default function SettingsPage() {
         .catch(() => {})
         .finally(() => setKbLoaded(true));
     }
-    if (activeTab === "Bot Flow" && !flowLoaded) {
-      api.buttonSuggestions()
-        .then((d: any) => setButtonSuggestions(d.suggestions ?? []))
-        .catch(() => {})
-        .finally(() => setFlowLoaded(true));
-    }
-  }, [activeTab, kbLoaded, flowLoaded]);
-
-  const reloadButtonSuggestions = useCallback(() => {
-    api.buttonSuggestions()
-      .then((d: any) => setButtonSuggestions(d.suggestions ?? []))
-      .catch(() => {});
-  }, []);
+  }, [activeTab, kbLoaded]);
 
   if (roleLoading) {
     return (
@@ -127,26 +111,7 @@ export default function SettingsPage() {
         )
       )}
 
-      {activeTab === "Bot Flow" && (
-        flowLoaded ? (
-          <div>
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-1">Bot Flow Suggestions</h2>
-              <p className="text-sm text-gray-400">
-                Weekly analysis scans conversations that hit "Something Else" and suggests new buttons
-                to add. Approving a suggestion adds the button live to the bot and writes the scripted
-                reply to the Google Doc — no code deploy needed.
-              </p>
-            </div>
-            <ButtonSuggestions
-              suggestions={buttonSuggestions}
-              onRunAnalysis={reloadButtonSuggestions}
-            />
-          </div>
-        ) : (
-          <p className="text-gray-500 text-sm">Loading…</p>
-        )
-      )}
+      {activeTab === "Bot Flow" && <BotFlowDiagram />}
     </div>
   );
 }

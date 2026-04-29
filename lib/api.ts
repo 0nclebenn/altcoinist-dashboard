@@ -113,6 +113,7 @@ export const api = {
   approveButton:        (id: number) => apiFetch(`/api/button-suggestions/${id}/approve`, { method: "POST" }),
   rejectButton:         (id: number) => apiFetch(`/api/button-suggestions/${id}/reject`,  { method: "POST" }),
   runButtonAnalysis:    ()           => apiFetch("/api/admin/run-button-analysis", { method: "POST" }),
+  flowTree:             ()           => apiFetch("/api/flow-tree"),
 
   // Profile — Clerk owns email + username. Backend owns telegram_handle (mapped to agent.username).
   // Signature is stored client-side in localStorage.
