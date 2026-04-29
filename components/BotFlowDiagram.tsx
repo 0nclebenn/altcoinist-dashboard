@@ -216,7 +216,7 @@ export default function BotFlowDiagram() {
       )}
 
       {/* Diagram */}
-      <div className="flex flex-col items-center w-full">
+      <div className="flex flex-col items-center w-full pb-16">
         {path.map((state, i) => {
           const node = tree.nodes[state];
           if (!node) return null;
@@ -411,50 +411,35 @@ function ButtonRow({
   onReject: (id: number) => void;
   pendingActionId: number | null;
 }) {
-  // Each "column" is the [+] icon or one of the buttons. Above each column we
-  // draw a half-rail on the left, a vertical drop, and a half-rail on the right.
-  // The first column hides its left half, the last hides its right — together
-  // they form a continuous horizontal rail with drops to each button head.
-  const columns: Array<{ kind: "plus" } | { kind: "btn"; b: FlowButton }> = [
-    { kind: "plus" },
-    ...buttons.map((b) => ({ kind: "btn" as const, b })),
-  ];
-
+  // Above each button we draw a half-rail on the left, a vertical drop, and a
+  // half-rail on the right. The first column hides its left half, the last
+  // hides its right — together they form a continuous horizontal rail with
+  // drops to each button head.
   return (
     <div className="w-full max-w-2xl flex flex-col items-center">
       {/* Branching connector + button heads */}
       <div className="flex items-stretch justify-center">
-        {columns.map((col, i) => {
+        {buttons.map((b, i) => {
           const isFirst = i === 0;
-          const isLast = i === columns.length - 1;
+          const isLast = i === buttons.length - 1;
           return (
-            <div key={i} className="flex flex-col items-center px-1.5">
+            <div key={`${b.target}-${b.label}`} className="flex flex-col items-center px-1.5">
               <div className="flex items-start self-stretch">
                 <div className={`flex-1 h-px ${isFirst ? "bg-transparent" : "bg-gray-700"}`} />
                 <div className="w-px h-4 bg-gray-700" />
                 <div className={`flex-1 h-px ${isLast ? "bg-transparent" : "bg-gray-700"}`} />
               </div>
-
-              {col.kind === "plus" ? (
-                <span
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-700 bg-gray-900 text-gray-500 text-base"
-                  title="Buttons are added via Run analysis → Approve"
-                >
-                  +
-                </span>
-              ) : (
-                <button
-                  onClick={() => onClick(col.b.target)}
-                  className={`inline-flex items-center gap-2 px-3 h-8 text-xs rounded-lg border transition-colors ${
-                    selected === col.b.target
-                      ? "bg-indigo-600 border-indigo-500 text-white"
-                      : "bg-gray-900 border-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-800"
-                  }`}
-                >
-                  <DragHandle />
-                  <span className="truncate max-w-[200px]">{col.b.label}</span>
-                </button>
-              )}
+              <button
+                onClick={() => onClick(b.target)}
+                className={`inline-flex items-center gap-2 px-3 h-8 text-xs rounded-lg border transition-colors ${
+                  selected === b.target
+                    ? "bg-indigo-600 border-indigo-500 text-white"
+                    : "bg-gray-900 border-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-800"
+                }`}
+              >
+                <DragHandle />
+                <span className="truncate max-w-[200px]">{b.label}</span>
+              </button>
             </div>
           );
         })}
