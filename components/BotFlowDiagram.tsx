@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface FlowButton {
-  label: string;
-  target: string;
-}
+interface FlowButton { label: string; target: string; }
 
 interface FlowNode {
   state: string;
@@ -28,10 +25,7 @@ interface FlowNode {
   back_to?: string;
 }
 
-interface FlowTree {
-  root: string;
-  nodes: Record<string, FlowNode>;
-}
+interface FlowTree { root: string; nodes: Record<string, FlowNode>; }
 
 interface Suggestion {
   id: number;
@@ -46,23 +40,46 @@ interface Suggestion {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BACK_LABEL_RX = /^⬅️/;
+
+/** Forward buttons only — strip "Back" navigation, which would be cycles. */
+function forwardButtons(node: FlowNode): FlowButton[] {
+  const out: FlowButton[] = [];
+  for (const row of node.buttons) {
+    for (const btn of row) {
+      if (BACK_LABEL_RX.test(btn.label)) continue;
+      out.push(btn);
+    }
+  }
+  return out;
+}
+
+/** Title-case a state name like "prob_alt_deposits" → "Prob Alt Deposits". */
+function titleizeState(state: string): string {
+  return state
+    .replace(/^sr_/, "")
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function BotFlowDiagram() {
   const [tree, setTree] = useState<FlowTree | null>(null);
   const [treeError, setTreeError] = useState(false);
-
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [path, setPath] = useState<string[]>([]);   // states from root → current selected leaf
   const [pendingActionId, setPendingActionId] = useState<number | null>(null);
-
   const [running, setRunning] = useState(false);
   const [analysisMsg, setAnalysisMsg] = useState<string | null>(null);
 
-  // Track which state nodes are expanded. Root is always shown.
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  // Initial load
+  // ── Load tree + suggestions ────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -73,7 +90,9 @@ export default function BotFlowDiagram() {
       if (!t) {
         setTreeError(true);
       } else {
-        setTree(t as FlowTree);
+        const tt = t as FlowTree;
+        setTree(tt);
+        setPath([tt.root]);
       }
       const sList = (s as { suggestions?: Suggestion[] })?.suggestions ?? [];
       setSuggestions(sList);
@@ -81,7 +100,6 @@ export default function BotFlowDiagram() {
     return () => { cancelled = true; };
   }, []);
 
-  // Suggestions indexed by parent_node for fast lookup
   const suggestionsByParent = useMemo(() => {
     const map: Record<string, Suggestion[]> = {};
     for (const s of suggestions) {
@@ -91,21 +109,26 @@ export default function BotFlowDiagram() {
     return map;
   }, [suggestions]);
 
-  function toggleExpanded(state: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(state)) next.delete(state);
-      else next.add(state);
-      return next;
+  // ── Path navigation ────────────────────────────────────────────────────────
+
+  function handleButtonClick(parentIndex: number, target: string) {
+    if (!tree?.nodes[target]) return;          // skip dangling targets (shouldn't happen)
+    setPath((prev) => {
+      // Toggle: if this target is already the next state, collapse
+      if (prev[parentIndex + 1] === target) {
+        return prev.slice(0, parentIndex + 1);
+      }
+      return [...prev.slice(0, parentIndex + 1), target];
     });
   }
+
+  // ── Run analysis ───────────────────────────────────────────────────────────
 
   async function handleRunAnalysis() {
     setRunning(true);
     setAnalysisMsg(null);
     try {
       await api.runButtonAnalysis();
-      // Backend runs analysis in background — give it a moment, then reload
       setAnalysisMsg("Running… this can take ~30 seconds. Reloading suggestions in 30s.");
       setTimeout(async () => {
         try {
@@ -115,13 +138,7 @@ export default function BotFlowDiagram() {
           if (list.length === 0) {
             setAnalysisMsg("No suggestions at the moment. Try again later.");
           } else {
-            setAnalysisMsg(`${list.length} suggestion${list.length === 1 ? "" : "s"} ready to review — highlighted in red below.`);
-            // Auto-expand parent nodes that have suggestions so they're visible
-            setExpanded((prev) => {
-              const next = new Set(prev);
-              for (const s of list) next.add(s.parent_node);
-              return next;
-            });
+            setAnalysisMsg(`${list.length} suggestion${list.length === 1 ? "" : "s"} ready — open the parent in red to review.`);
           }
         } catch {
           setAnalysisMsg("Could not fetch suggestions after analysis.");
@@ -168,19 +185,18 @@ export default function BotFlowDiagram() {
       </p>
     );
   }
-
-  if (!tree) {
+  if (!tree || path.length === 0) {
     return <p className="text-gray-500 text-sm">Loading flow…</p>;
   }
 
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
+      <div className="flex items-start justify-between gap-4 mb-6 max-w-3xl mx-auto">
         <div className="flex-1">
           <h2 className="text-lg font-semibold mb-1">Bot Flow</h2>
           <p className="text-sm text-gray-400">
-            Click any button to expand its branch. Scripted replies show inline.
+            Click a button to drill into the next step. Click again to collapse.
             Run analysis to surface gaps where users hit &quot;Something Else&quot;.
           </p>
         </div>
@@ -194,118 +210,95 @@ export default function BotFlowDiagram() {
       </div>
 
       {analysisMsg && (
-        <div className="mb-4 px-3 py-2 text-xs text-indigo-200 bg-indigo-900/40 border border-indigo-800/60 rounded">
+        <div className="max-w-3xl mx-auto mb-4 px-3 py-2 text-xs text-indigo-200 bg-indigo-900/40 border border-indigo-800/60 rounded">
           {analysisMsg}
         </div>
       )}
 
-      {/* Tree */}
-      <div className="space-y-3">
-        <FlowStateNode
-          state={tree.root}
-          tree={tree}
-          expanded={expanded}
-          onToggle={toggleExpanded}
-          suggestionsByParent={suggestionsByParent}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          pendingActionId={pendingActionId}
-          depth={0}
-          ancestors={new Set([tree.root])}
-        />
+      {/* Diagram */}
+      <div className="flex flex-col items-center w-full">
+        {path.map((state, i) => {
+          const node = tree.nodes[state];
+          if (!node) return null;
+          const fwd = forwardButtons(node);
+          const selectedNext = path[i + 1];
+          const isLastInPath = i === path.length - 1;
+          const isFirst = i === 0;
+          const sugForParent = suggestionsByParent[state] ?? [];
+          const hasButtons = fwd.length > 0;
+
+          return (
+            <Fragment key={state}>
+              <StateCard node={node} isRoot={isFirst} />
+
+              {hasButtons && (
+                <>
+                  <Arrow />
+                  <ButtonRow
+                    buttons={fwd}
+                    selected={selectedNext}
+                    onClick={(target) => handleButtonClick(i, target)}
+                    suggestions={sugForParent}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                    pendingActionId={pendingActionId}
+                  />
+                  {/* Arrow into the next card only when one is selected */}
+                  {!isLastInPath && <Arrow />}
+                </>
+              )}
+            </Fragment>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FlowStateNode — recursive renderer for one state in the flow
+// StateCard — Mava-style card with title, message, metadata strip
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface FlowStateNodeProps {
-  state: string;
-  tree: FlowTree;
-  expanded: Set<string>;
-  onToggle: (state: string) => void;
-  suggestionsByParent: Record<string, Suggestion[]>;
-  onApprove: (id: number) => void;
-  onReject: (id: number) => void;
-  pendingActionId: number | null;
-  depth: number;
-  ancestors: Set<string>; // prevents cycles via ⬅️ Back buttons
-}
-
-function FlowStateNode({
-  state,
-  tree,
-  expanded,
-  onToggle,
-  suggestionsByParent,
-  onApprove,
-  onReject,
-  pendingActionId,
-  depth,
-  ancestors,
-}: FlowStateNodeProps) {
-  const node = tree.nodes[state];
-  if (!node) {
-    return (
-      <div className="px-3 py-2 text-xs text-gray-500 italic border border-gray-800 rounded">
-        (missing state: {state})
-      </div>
-    );
-  }
-
-  const isLeaf = !node.buttons || node.buttons.length === 0;
-  const nodeSuggestions = suggestionsByParent[state] ?? [];
-  const hasSuggestions = nodeSuggestions.length > 0;
-
-  // Tone the card by node type
+function StateCard({ node, isRoot }: { node: FlowNode; isRoot: boolean }) {
   const cardTone = node.ai
-    ? "border-purple-700/50 bg-purple-900/10"
+    ? "border-purple-700/50"
     : node.escalate
-    ? "border-orange-700/50 bg-orange-900/10"
+    ? "border-orange-700/50"
     : node.scripted_reply
-    ? "border-emerald-700/50 bg-emerald-900/10"
-    : hasSuggestions
-    ? "border-red-700/60 bg-red-900/10"
-    : "border-gray-700 bg-gray-900";
+    ? "border-emerald-700/50"
+    : "border-gray-700";
+
+  const title = isRoot ? "Initial Message" : titleizeState(node.state);
+  const dotColor =
+    node.ai ? "bg-purple-500" :
+    node.escalate ? "bg-orange-500" :
+    node.scripted_reply ? "bg-emerald-500" :
+    isRoot ? "bg-indigo-500" :
+    "bg-gray-400";
 
   return (
-    <div
-      className={`rounded-xl border ${cardTone} overflow-hidden`}
-      style={{ marginLeft: depth > 0 ? `${Math.min(depth, 4) * 12}px` : 0 }}
-    >
-      {/* Header row */}
-      <div className="px-4 py-3 border-b border-gray-800/60 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-mono text-gray-500 truncate">{state}</span>
-          {node.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {node.tags.map((t) => (
-                <span key={t} className="text-[9px] bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded">
-                  {t}
-                </span>
-              ))}
-            </div>
-          )}
-          {node.ai && <NodeBadge color="purple">AI handoff</NodeBadge>}
-          {node.escalate && <NodeBadge color="orange">Escalate</NodeBadge>}
-          {node.terminal && <NodeBadge color="gray">Terminal</NodeBadge>}
-          {node.collect_text && <NodeBadge color="blue">Collects text</NodeBadge>}
-        </div>
+    <div className={`w-full max-w-2xl rounded-xl border ${cardTone} bg-gray-900 p-5`}>
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+        {node.ai && <NodeBadge color="purple">AI handoff</NodeBadge>}
+        {node.escalate && <NodeBadge color="orange">Escalate</NodeBadge>}
+        {node.terminal && <NodeBadge color="gray">Terminal</NodeBadge>}
+        {node.collect_text && <NodeBadge color="blue">Collects text</NodeBadge>}
+        <span className="ml-auto text-[10px] font-mono text-gray-500">{node.state}</span>
       </div>
 
       {/* Bot message */}
       {node.message && (
-        <div className="px-4 py-3 text-sm text-gray-200 whitespace-pre-wrap">
-          {node.message}
+        <div className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2.5 mb-3">
+          <p className="text-sm text-gray-200 whitespace-pre-wrap">{node.message}</p>
         </div>
       )}
 
       {/* Scripted reply content */}
       {node.scripted_reply && node.scripted_content && (
-        <div className="mx-4 mb-3 px-3 py-2 bg-emerald-900/20 border border-emerald-800/40 rounded">
+        <div className="rounded-lg border border-emerald-800/40 bg-emerald-900/15 px-3 py-2.5 mb-3">
           {node.scripted_title && (
             <p className="text-[10px] uppercase tracking-wide text-emerald-400 mb-1 font-semibold">
               {node.scripted_title}
@@ -315,26 +308,139 @@ function FlowStateNode({
         </div>
       )}
 
-      {/* Buttons */}
-      {!isLeaf && (
-        <div className="px-4 pb-3 space-y-1.5">
-          {node.buttons.map((row, ri) => (
-            <div key={ri} className="flex flex-wrap gap-1.5">
-              {row.map((b) => (
-                <FlowButtonChip
-                  key={`${b.target}-${b.label}`}
-                  button={b}
-                  isExpanded={expanded.has(b.target)}
-                  isCycleTarget={ancestors.has(b.target)}
-                  targetExists={Boolean(tree.nodes[b.target])}
-                  onClick={() => onToggle(b.target)}
-                />
-              ))}
-            </div>
-          ))}
+      {/* AI handoff hint */}
+      {node.ai && !node.scripted_reply && (
+        <div className="rounded-lg border border-purple-800/40 bg-purple-900/15 px-3 py-2.5 mb-3">
+          <p className="text-xs text-purple-200">
+            From here Claude takes over and answers the user&apos;s free-text question.
+            Up to 2 attempts before the ticket escalates to a human.
+          </p>
+        </div>
+      )}
 
-          {/* Suggested buttons hanging off this parent */}
-          {nodeSuggestions.map((s) => (
+      {/* Escalation hint */}
+      {node.escalate && (
+        <div className="rounded-lg border border-orange-800/40 bg-orange-900/15 px-3 py-2.5 mb-3">
+          <p className="text-xs text-orange-200">
+            Immediate escalation to a human. The user is told to message the support team directly.
+          </p>
+        </div>
+      )}
+
+      {/* Metadata strip — Mava-style pills */}
+      <div className="flex items-center gap-3 text-[10px] text-gray-500">
+        <MetaPill label="Category" value={node.tags[0]} />
+        <MetaPill label="Tag"      value={node.tags[1]} />
+        <MetaPill label="Priority" value={node.escalate ? "high" : node.ai ? "medium" : "low"} />
+        <MetaPill
+          label="Status"
+          value={
+            node.terminal     ? "closed"   :
+            node.scripted_reply ? "resolved" :
+            node.escalate     ? "escalated" :
+            node.ai           ? "ai"        :
+            "open"
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function MetaPill({ label, value }: { label: string; value?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="text-gray-500">{label}</span>
+      <span className="text-gray-300 bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded">
+        {value || "—"}
+      </span>
+    </span>
+  );
+}
+
+function NodeBadge({ color, children }: { color: "purple" | "orange" | "gray" | "blue"; children: React.ReactNode }) {
+  const colors: Record<string, string> = {
+    purple: "bg-purple-900/60 text-purple-300 border-purple-700/50",
+    orange: "bg-orange-900/60 text-orange-300 border-orange-700/50",
+    gray:   "bg-gray-800 text-gray-400 border-gray-700",
+    blue:   "bg-blue-900/60 text-blue-300 border-blue-700/50",
+  };
+  return (
+    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${colors[color]}`}>
+      {children}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Arrow — vertical line + chevron
+// ─────────────────────────────────────────────────────────────────────────────
+
+function Arrow() {
+  return (
+    <div className="flex flex-col items-center my-1.5" aria-hidden="true">
+      <span className="block w-px h-5 bg-gray-700" />
+      <svg width="10" height="6" viewBox="0 0 10 6" className="text-gray-700 -mt-px">
+        <path d="M0 0 L5 6 L10 0" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      </svg>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ButtonRow — horizontal row of clickable button pills + suggestions
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ButtonRow({
+  buttons,
+  selected,
+  onClick,
+  suggestions,
+  onApprove,
+  onReject,
+  pendingActionId,
+}: {
+  buttons: FlowButton[];
+  selected?: string;
+  onClick: (target: string) => void;
+  suggestions: Suggestion[];
+  onApprove: (id: number) => void;
+  onReject: (id: number) => void;
+  pendingActionId: number | null;
+}) {
+  return (
+    <div className="w-full max-w-2xl flex flex-col items-center gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {/* "Add" placeholder — visual nod to Mava's [+] button */}
+        <span
+          className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-700 bg-gray-900 text-gray-500 text-base"
+          title="Buttons here are added via Run analysis → Approve"
+        >
+          +
+        </span>
+        {buttons.map((b) => {
+          const isSelected = selected === b.target;
+          return (
+            <button
+              key={`${b.target}-${b.label}`}
+              onClick={() => onClick(b.target)}
+              className={`inline-flex items-center gap-2 px-3 h-8 text-xs rounded-lg border transition-colors ${
+                isSelected
+                  ? "bg-indigo-600 border-indigo-500 text-white"
+                  : "bg-gray-900 border-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-800"
+              }`}
+            >
+              <DragHandle />
+              <span className="truncate max-w-[200px]">{b.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Suggested buttons hanging off this row */}
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+          {suggestions.map((s) => (
             <SuggestionChip
               key={s.id}
               suggestion={s}
@@ -345,80 +451,18 @@ function FlowStateNode({
           ))}
         </div>
       )}
-
-      {/* Children (rendered when expanded) */}
-      {!isLeaf && (
-        <div className="border-t border-gray-800/40 bg-black/20">
-          {node.buttons.flatMap((row) =>
-            row
-              .filter((b) => expanded.has(b.target) && tree.nodes[b.target] && !ancestors.has(b.target))
-              .map((b) => (
-                <div key={`child-${b.target}`} className="px-3 py-3">
-                  <FlowStateNode
-                    state={b.target}
-                    tree={tree}
-                    expanded={expanded}
-                    onToggle={onToggle}
-                    suggestionsByParent={suggestionsByParent}
-                    onApprove={onApprove}
-                    onReject={onReject}
-                    pendingActionId={pendingActionId}
-                    depth={depth + 1}
-                    ancestors={new Set([...ancestors, b.target])}
-                  />
-                </div>
-              ))
-          )}
-        </div>
-      )}
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FlowButtonChip — clickable button in the bot flow
-// ─────────────────────────────────────────────────────────────────────────────
-
-function FlowButtonChip({
-  button,
-  isExpanded,
-  isCycleTarget,
-  targetExists,
-  onClick,
-}: {
-  button: FlowButton;
-  isExpanded: boolean;
-  isCycleTarget: boolean;
-  targetExists: boolean;
-  onClick: () => void;
-}) {
-  // Back/cycle buttons are visually muted and not clickable
-  if (isCycleTarget || !targetExists) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 border border-gray-800 rounded-lg">
-        {button.label}
-        <span className="text-[9px] text-gray-600">→ {button.target}</span>
-      </span>
-    );
-  }
-
+function DragHandle() {
   return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-colors ${
-        isExpanded
-          ? "bg-indigo-600/30 border border-indigo-500 text-white"
-          : "bg-gray-800 border border-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-700"
-      }`}
-    >
-      <span aria-hidden="true">{isExpanded ? "▾" : "▸"}</span>
-      {button.label}
-    </button>
+    <span className="text-gray-500 select-none" aria-hidden="true">⋮⋮</span>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SuggestionChip — pending button suggestion, hanging off its parent
+// SuggestionChip — pending button suggestion, hanging off its parent row
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SuggestionChip({
@@ -439,18 +483,20 @@ function SuggestionChip({
   })();
 
   return (
-    <div className="mt-2 rounded-lg border border-red-700/70 bg-red-900/20 overflow-hidden animate-pulse-once">
-      <div className="px-3 py-2 flex items-center gap-2 flex-wrap">
+    <div className="rounded-lg border border-red-700/70 bg-red-900/20 overflow-hidden">
+      <div className="px-3 h-8 flex items-center gap-2">
         <span className="text-[10px] uppercase tracking-wide text-red-400 font-semibold">
           Suggested
         </span>
-        <span className="text-xs text-red-100 font-medium">&ldquo;{suggestion.button_label}&rdquo;</span>
+        <span className="text-xs text-red-100 font-medium truncate max-w-[160px]">
+          &ldquo;{suggestion.button_label}&rdquo;
+        </span>
         <span className="text-[10px] text-red-300/70">
-          {suggestion.occurrence_count} occurrences
+          {suggestion.occurrence_count}×
         </span>
         <button
           onClick={() => setShowDetails((v) => !v)}
-          className="text-[10px] text-red-300 hover:text-red-100 underline ml-auto"
+          className="text-[10px] text-red-300 hover:text-red-100 underline"
         >
           {showDetails ? "Hide" : "Preview"}
         </button>
@@ -497,23 +543,5 @@ function SuggestionChip({
         </div>
       )}
     </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// NodeBadge — small colored pill for node type
-// ─────────────────────────────────────────────────────────────────────────────
-
-function NodeBadge({ color, children }: { color: "purple" | "orange" | "gray" | "blue"; children: React.ReactNode }) {
-  const colors: Record<string, string> = {
-    purple: "bg-purple-900/60 text-purple-300 border-purple-700/50",
-    orange: "bg-orange-900/60 text-orange-300 border-orange-700/50",
-    gray:   "bg-gray-800 text-gray-400 border-gray-700",
-    blue:   "bg-blue-900/60 text-blue-300 border-blue-700/50",
-  };
-  return (
-    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${colors[color]}`}>
-      {children}
-    </span>
   );
 }
