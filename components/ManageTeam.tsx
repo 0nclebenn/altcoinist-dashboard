@@ -138,6 +138,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
 
   // Delete in-flight tracking
   const [deleting, setDeleting] = useState<Record<string, boolean>>({});
+  const [deleteError, setDeleteError] = useState<Record<string, string>>({});
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -258,6 +259,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
 
   async function handleDeleteMember(username: string) {
     setDeleting((prev) => ({ ...prev, [username]: true }));
+    setDeleteError((prev) => ({ ...prev, [username]: "" }));
     try {
       await api.removeAgent(username);
       const removingSelf = username === currentAgent?.username;
@@ -267,8 +269,9 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
         // Self-remove: Clerk user deleted server-side; force reload to /sign-in to clear session
         window.location.href = "/sign-in";
       }
-    } catch {
-      // Silently ignore — member stays in list
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to remove member.";
+      setDeleteError((prev) => ({ ...prev, [username]: message }));
     } finally {
       setDeleting((prev) => ({ ...prev, [username]: false }));
     }
@@ -513,6 +516,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
               const updatingRole = roleUpdating[member.username] ?? false;
               const roleErr = roleError[member.username] ?? "";
               const isDeleting = deleting[member.username] ?? false;
+              const deleteErr = deleteError[member.username] ?? "";
 
               return (
                 <div
@@ -538,6 +542,9 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                     )}
                     {roleErr && (
                       <p className="text-xs text-red-400 mt-0.5">{roleErr}</p>
+                    )}
+                    {deleteErr && (
+                      <p className="text-xs text-red-400 mt-0.5">{deleteErr}</p>
                     )}
                   </div>
 
