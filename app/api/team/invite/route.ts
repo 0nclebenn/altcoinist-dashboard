@@ -46,6 +46,48 @@ type ClerkInvite = {
   warning?: string;
 };
 
+/**
+ * Defensive cleanup: if a Clerk user already exists for this email (an "orphan"
+ * left behind by a previous removal that didn't fully scrub Clerk, or by an
+ * abandoned partial sign-up), delete it. Without this, re-inviting that email
+ * lands the invitee on Clerk's "an account already exists, sign in instead"
+ * page — which then loops because the (now removed) user has no agents row,
+ * so RoleContext bounces them to /not-on-team forever.
+ *
+ * Safe because the FastAPI POST /api/invites endpoint upstream rejects with
+ * 409 if the email is already an active team member, so by the time we get
+ * here we know any existing Clerk user with this email is an orphan.
+ */
+async function deleteOrphanClerkUser(email: string): Promise<{ deleted: boolean; warning?: string }> {
+  if (!CLERK_SECRET) return { deleted: false, warning: "CLERK_SECRET_KEY missing" };
+  try {
+    const lookupUrl = `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(email)}`;
+    const lookupRes = await fetch(lookupUrl, {
+      headers: { Authorization: `Bearer ${CLERK_SECRET}` },
+    });
+    if (!lookupRes.ok) {
+      return { deleted: false, warning: `Clerk user lookup ${lookupRes.status}` };
+    }
+    const users = await lookupRes.json().catch(() => []);
+    if (!Array.isArray(users) || users.length === 0) {
+      return { deleted: false }; // no orphan — nothing to do
+    }
+    const userId = users[0]?.id;
+    if (!userId) return { deleted: false, warning: "Clerk user lookup returned no id" };
+    const delRes = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${CLERK_SECRET}` },
+    });
+    if (!delRes.ok) {
+      const body = await delRes.text().catch(() => "");
+      return { deleted: false, warning: `Clerk user delete ${delRes.status}: ${body.slice(0, 150)}` };
+    }
+    return { deleted: true };
+  } catch (e: any) {
+    return { deleted: false, warning: `Clerk orphan cleanup exception: ${e?.message ?? "unknown"}` };
+  }
+}
+
 async function createClerkInvitation(
   email: string,
   role: string,
@@ -111,10 +153,14 @@ export async function POST(request: NextRequest) {
   const dashboardOrigin = getDashboardOrigin(request);
   const redirectUrl = `${dashboardOrigin}/invite/${token}`;
 
-  // 2. Create Clerk Invitation (this is what unlocks sign-up in Restricted mode)
+  // 2. Defensive: clean up any orphan Clerk user with this email so the
+  // Invitations API doesn't return "user already exists" on re-invites.
+  const orphan = await deleteOrphanClerkUser(email);
+
+  // 3. Create Clerk Invitation (this is what unlocks sign-up in Restricted mode)
   const clerk = await createClerkInvitation(email, role, redirectUrl);
 
-  // 3. Forward to backend with everything pre-baked
+  // 4. Forward to backend with everything pre-baked
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-API-Key": API_KEY,
@@ -140,6 +186,8 @@ export async function POST(request: NextRequest) {
     ...backendData,
     clerk_invited: clerk.ok,
     ...(clerk.warning ? { clerk_warning: clerk.warning } : {}),
+    ...(orphan.deleted ? { clerk_orphan_cleaned: true } : {}),
+    ...(orphan.warning ? { clerk_orphan_warning: orphan.warning } : {}),
   };
 
   return NextResponse.json(responseBody, { status: backendRes.status });
