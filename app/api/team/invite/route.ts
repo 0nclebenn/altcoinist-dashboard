@@ -2,44 +2,87 @@
  * Team invite orchestrator.
  *
  * Why this exists:
- *   The bot's Clerk app is in Restricted sign-up mode — only emails on
- *   Clerk's allowlist can register. Our backend doesn't have the Clerk
- *   secret (and shouldn't need it). This route is the bridge:
+ *   The bot's Clerk app is in Restricted sign-up mode — only invited
+ *   users can register. Clerk's *Invitations* API generates a one-time
+ *   ticket that bypasses Restricted (allowlist alone doesn't on free tier).
  *
- *     1. Add the invitee's email to Clerk's allowlist (so they can sign up)
- *     2. Forward the invite request to the FastAPI backend (which writes
- *        the invitation row, sends Brevo email, returns the invite link)
+ *   Flow per invite:
+ *     1. Generate our own token (used in Brevo email link → /invite/[token])
+ *     2. Call POST https://api.clerk.com/v1/invitations to create a Clerk
+ *        invitation. notify=false (we send our own branded Brevo email).
+ *        redirect_url points back to /invite/[token] so after Clerk sign-up
+ *        the user lands on our page to enter their Telegram username.
+ *     3. Capture the Clerk URL (which contains __clerk_ticket=...).
+ *     4. Call FastAPI POST /api/invites with {email, role, token,
+ *        clerk_ticket_url, clerk_invitation_id} — backend persists, sends
+ *        Brevo email with our /invite/[token] link, returns invite_link.
  *
- *   Both calls happen server-side; the Clerk secret never leaves Vercel.
+ *   The Clerk secret never leaves Vercel. The bot droplet doesn't need it.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
+import { randomBytes } from "node:crypto";
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const API_KEY = process.env.API_KEY || "";
 const CLERK_SECRET = process.env.CLERK_SECRET_KEY || "";
 
-async function addToClerkAllowlist(email: string): Promise<{ ok: boolean; warning?: string }> {
+function generateToken(): string {
+  // 32 bytes → 43 base64url chars, matches Python secrets.token_urlsafe(32) length range
+  return randomBytes(32).toString("base64url");
+}
+
+function getDashboardOrigin(request: NextRequest): string {
+  // Prefer the request's own origin so dev/preview/production all work
+  const url = new URL(request.url);
+  return `${url.protocol}//${url.host}`;
+}
+
+type ClerkInvite = {
+  ok: boolean;
+  ticket_url?: string;
+  invitation_id?: string;
+  warning?: string;
+};
+
+async function createClerkInvitation(
+  email: string,
+  role: string,
+  redirectUrl: string,
+): Promise<ClerkInvite> {
   if (!CLERK_SECRET) {
     return { ok: false, warning: "CLERK_SECRET_KEY missing on the server" };
   }
   try {
-    const res = await fetch("https://api.clerk.com/v1/allowlist_identifiers", {
+    const res = await fetch("https://api.clerk.com/v1/invitations", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${CLERK_SECRET}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ identifier: email, notify: false }),
+      body: JSON.stringify({
+        email_address: email,
+        public_metadata: { role },
+        redirect_url: redirectUrl,
+        notify: false,
+        ignore_existing: true,
+      }),
     });
-    if (res.ok) return { ok: true };
-    // 422 is Clerk's "duplicate / already exists" — that's fine, treat as success
-    if (res.status === 422) return { ok: true };
-    const body = await res.text().catch(() => "");
-    return { ok: false, warning: `Clerk allowlist returned ${res.status}: ${body.slice(0, 200)}` };
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      return {
+        ok: true,
+        ticket_url: data.url,
+        invitation_id: data.id,
+      };
+    }
+    return {
+      ok: false,
+      warning: `Clerk invitations returned ${res.status}: ${JSON.stringify(data).slice(0, 300)}`,
+    };
   } catch (e: any) {
-    return { ok: false, warning: `Clerk allowlist exception: ${e?.message ?? "unknown"}` };
+    return { ok: false, warning: `Clerk invitations exception: ${e?.message ?? "unknown"}` };
   }
 }
 
@@ -54,7 +97,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ detail: "role must be 'admin' or 'moderator'" }, { status: 400 });
   }
 
-  // Resolve the requesting user's email (Clerk-authenticated)
+  // Resolve the requesting user's email (for backend permission check)
   let requesterEmail = "";
   try {
     const user = await currentUser();
@@ -63,10 +106,15 @@ export async function POST(request: NextRequest) {
     /* not signed in — backend will reject with 401 */
   }
 
-  // 1. Add to Clerk allowlist
-  const allowlistResult = await addToClerkAllowlist(email);
+  // 1. Pre-generate our token so the Clerk redirect_url can include it
+  const token = generateToken();
+  const dashboardOrigin = getDashboardOrigin(request);
+  const redirectUrl = `${dashboardOrigin}/invite/${token}`;
 
-  // 2. Call backend /api/invites
+  // 2. Create Clerk Invitation (this is what unlocks sign-up in Restricted mode)
+  const clerk = await createClerkInvitation(email, role, redirectUrl);
+
+  // 3. Forward to backend with everything pre-baked
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-API-Key": API_KEY,
@@ -77,16 +125,21 @@ export async function POST(request: NextRequest) {
     method: "POST",
     headers,
     cache: "no-store",
-    body: JSON.stringify({ email, role }),
+    body: JSON.stringify({
+      email,
+      role,
+      token,
+      clerk_ticket_url: clerk.ticket_url,
+      clerk_invitation_id: clerk.invitation_id,
+    }),
   });
 
   const backendData = await backendRes.json().catch(() => ({}));
 
-  // Merge allowlist warning into response if any
   const responseBody = {
     ...backendData,
-    clerk_allowlisted: allowlistResult.ok,
-    ...(allowlistResult.warning ? { clerk_warning: allowlistResult.warning } : {}),
+    clerk_invited: clerk.ok,
+    ...(clerk.warning ? { clerk_warning: clerk.warning } : {}),
   };
 
   return NextResponse.json(responseBody, { status: backendRes.status });

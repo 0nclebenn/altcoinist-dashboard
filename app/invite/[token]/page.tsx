@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { SignIn, SignUp, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 
 type InviteInfo = {
   email: string;
   role: "admin" | "moderator";
   expires_at: string;
+  clerk_ticket_url?: string | null;
 };
 
 export default function AcceptInvitePage() {
@@ -110,23 +111,43 @@ export default function AcceptInvitePage() {
     );
   }
 
-  // 3a. Not authenticated yet → show SignUp prefilled with the invite email
+  // 3a. Not authenticated yet → redirect to Clerk's invitation URL (with __clerk_ticket).
+  // This is what unlocks sign-up in Restricted mode. After Clerk sign-up, Clerk
+  // redirects back to /invite/[token] (set as redirect_url when the invitation
+  // was created server-side).
   if (userLoaded && !user) {
+    if (!invite.clerk_ticket_url) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-950 text-gray-300 p-6">
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-md text-center">
+            <h1 className="text-xl font-semibold text-white mb-2">Invitation incomplete</h1>
+            <p className="text-gray-400 mb-2">
+              This invitation is missing its sign-up ticket. Ask the admin to cancel and resend it.
+            </p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-gray-300 p-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-md w-full mb-6 text-center">
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-md w-full text-center">
           <h1 className="text-xl font-semibold text-white mb-2">
             You've been invited to Altcoinist Support
           </h1>
-          <p className="text-gray-400">
-            Joining as <strong className="text-white">{invite.role}</strong>.
-            Sign up with <strong className="text-white">{invite.email}</strong> to continue.
+          <p className="text-gray-400 mb-6">
+            Joining as <strong className="text-white">{invite.role}</strong> with{" "}
+            <strong className="text-white">{invite.email}</strong>.
+          </p>
+          <a
+            href={invite.clerk_ticket_url}
+            className="inline-block bg-violet-600 hover:bg-violet-700 text-white font-medium px-4 py-2 rounded transition"
+          >
+            Continue to sign up
+          </a>
+          <p className="text-gray-500 text-xs mt-4">
+            You'll be redirected to create your account, then come back here to finish.
           </p>
         </div>
-        <SignUp
-          forceRedirectUrl={`/invite/${params.token}`}
-          initialValues={{ emailAddress: invite.email }}
-        />
       </div>
     );
   }
