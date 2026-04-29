@@ -227,9 +227,22 @@ export default function BotFlowDiagram() {
           const sugForParent = suggestionsByParent[state] ?? [];
           const hasButtons = fwd.length > 0;
 
+          // Title for non-root cards = label of the button that led here.
+          // Strip leading emoji so "🤖 Altcoinist Bot" → "Altcoinist Bot".
+          let title: string | undefined;
+          if (!isFirst) {
+            const parent = tree.nodes[path[i - 1]];
+            const incomingBtn = parent
+              ? parent.buttons.flat().find((b) => b.target === state)
+              : undefined;
+            if (incomingBtn) {
+              title = incomingBtn.label.replace(/^[\p{Extended_Pictographic}‍️]+\s*/u, "").trim();
+            }
+          }
+
           return (
             <Fragment key={state}>
-              <StateCard node={node} isRoot={isFirst} />
+              <StateCard node={node} isRoot={isFirst} title={title} />
 
               {hasButtons && (
                 <>
@@ -260,7 +273,7 @@ export default function BotFlowDiagram() {
 // StateCard — Mava-style card with title, message, metadata strip
 // ─────────────────────────────────────────────────────────────────────────────
 
-function StateCard({ node, isRoot }: { node: FlowNode; isRoot: boolean }) {
+function StateCard({ node, isRoot, title: titleOverride }: { node: FlowNode; isRoot: boolean; title?: string }) {
   const cardTone = node.ai
     ? "border-purple-700/50"
     : node.escalate
@@ -269,7 +282,11 @@ function StateCard({ node, isRoot }: { node: FlowNode; isRoot: boolean }) {
     ? "border-emerald-700/50"
     : "border-gray-700";
 
-  const title = isRoot ? "Initial Message" : titleizeState(node.state);
+  const title = isRoot
+    ? "Initial Message"
+    : (titleOverride && titleOverride.length > 0)
+    ? titleOverride
+    : titleizeState(node.state);
   const dotColor =
     node.ai ? "bg-purple-500" :
     node.escalate ? "bg-orange-500" :
