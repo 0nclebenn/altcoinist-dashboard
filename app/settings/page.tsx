@@ -50,7 +50,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col h-full p-8">
+    <div className="flex flex-col min-h-full p-8">
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
       <div className="flex gap-1 border-b border-gray-800 mb-8">
