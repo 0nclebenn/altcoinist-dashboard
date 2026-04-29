@@ -93,7 +93,7 @@ export const api = {
     return apiFetch(`/api/analytics${qs ? `?${qs}` : ""}`);
   },
   agents:           ()                         => apiFetch("/api/agents"),
-  addAgent:         (body: object)             => apiFetch("/api/agents", { method: "POST", body: JSON.stringify(body) }),
+  // addAgent removed — invitations are the only legitimate path to add team members. Use api.sendInvite.
   // removeAgent uses the orchestrator route (deletes Clerk user + DB agent + cancels pending invites)
   removeAgent: async (username: string) => {
     const res = await fetch(`/api/team/remove/${encodeURIComponent(username)}`, {
