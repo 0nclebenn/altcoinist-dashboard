@@ -21,19 +21,20 @@ export default function SettingsPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>("Account");
 
-  // KB data
-  const [replies, setReplies] = useState<any[]>([]);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [docUpdates, setDocUpdates] = useState<any[]>([]);
+  // KB data — downstream components (KBEditor, KBSuggestions, DocUpdateSuggestions)
+  // accept loose row shapes, so we use unknown[] here and let them pin their own props.
+  const [replies, setReplies] = useState<unknown[]>([]);
+  const [suggestions, setSuggestions] = useState<unknown[]>([]);
+  const [docUpdates, setDocUpdates] = useState<unknown[]>([]);
   const [kbLoaded, setKbLoaded] = useState(false);
 
   useEffect(() => {
     if (activeTab === "Knowledge Base" && !kbLoaded) {
       Promise.all([api.scriptedReplies(), api.kbSuggestions(), api.docUpdateSuggestions()])
-        .then(([r, s, d]: any[]) => {
-          setReplies(r.replies ?? []);
-          setSuggestions(s.suggestions ?? []);
-          setDocUpdates(d.suggestions ?? []);
+        .then(([r, s, d]) => {
+          setReplies(((r as { replies?: unknown[] })?.replies) ?? []);
+          setSuggestions(((s as { suggestions?: unknown[] })?.suggestions) ?? []);
+          setDocUpdates(((d as { suggestions?: unknown[] })?.suggestions) ?? []);
         })
         .catch(() => {})
         .finally(() => setKbLoaded(true));
@@ -85,7 +86,8 @@ export default function SettingsPage() {
                 <h2 className="text-lg font-semibold mb-4 text-green-400">
                   📝 {docUpdates.length} Pending Doc Update{docUpdates.length !== 1 ? "s" : ""}
                 </h2>
-                <DocUpdateSuggestions suggestions={docUpdates} />
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <DocUpdateSuggestions suggestions={docUpdates as any} />
               </div>
             )}
             {suggestions.length > 0 && (
@@ -98,9 +100,10 @@ export default function SettingsPage() {
             )}
             <h2 className="text-lg font-semibold mb-4">Scripted Replies</h2>
             <div className="space-y-3">
-              {replies.map((r: any) => (
-                <KBEditor key={r.id} reply={r} />
-              ))}
+              {replies.map((r) => {
+                const reply = r as { id: number };
+                return <KBEditor key={reply.id} reply={r} />;
+              })}
               {replies.length === 0 && (
                 <p className="text-gray-500 text-sm">No scripted replies found.</p>
               )}
