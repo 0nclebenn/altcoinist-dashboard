@@ -1,5 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { api, Role, AgentMember } from "@/lib/api";
 
@@ -19,8 +20,15 @@ const RoleContext = createContext<RoleContextValue>({
   refetchAgents: async () => {},
 });
 
+// Routes that signed-in but not-on-team users are still allowed to visit.
+// Everything else triggers a redirect to /not-on-team.
+const TEAM_BYPASS_PATHS = ["/not-on-team", "/sign-in", "/sign-up", "/invite"];
+
 export function RoleProvider({ children }: { children: ReactNode }) {
   const { user, isLoaded } = useUser();
+  const router = useRouter();
+  const pathname = usePathname() ?? "";
+
   const [currentRole, setCurrentRole] = useState<Role>("moderator");
   const [currentAgent, setCurrentAgent] = useState<AgentMember | null>(null);
   const [allAgents, setAllAgents] = useState<AgentMember[]>([]);
@@ -44,58 +52,38 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // DB is the single source of truth for roles. Match the Clerk user to an
+  // agents row by email (preferred) or Telegram username. If neither hits,
+  // the user is not on the team — redirect them away.
+  //
+  // Clerk's publicMetadata.role is intentionally NOT consulted: it's set at
+  // invite-accept time and goes stale after transfer-ownership / role updates.
   const resolveRole = (clerkUser: any, agents: AgentMember[]) => {
-    // 1. Prefer Clerk publicMetadata.role (set by backend on invite accept)
-    const metaRole = clerkUser.publicMetadata?.role as Role | undefined;
-    if (metaRole && ["super_admin", "admin", "moderator"].includes(metaRole)) {
-      setCurrentRole(metaRole);
-      const matched = agents.find(
-        (a) => a.email === clerkUser.primaryEmailAddress?.emailAddress || a.username === clerkUser.username
-      );
-      setCurrentAgent(matched ?? {
-        username: clerkUser.username ?? clerkUser.firstName ?? "You",
-        email: clerkUser.primaryEmailAddress?.emailAddress,
-        role: metaRole,
-      });
-      return;
-    }
+    const clerkEmail = (clerkUser.primaryEmailAddress?.emailAddress ?? "").toLowerCase();
+    const clerkUsername = (clerkUser.username ?? "").toLowerCase();
 
-    // 2. Fallback: match by Clerk username or email username part to agent list
-    const clerkEmail = clerkUser.primaryEmailAddress?.emailAddress ?? "";
-    const clerkUsername = clerkUser.username ?? "";
-    const matched = agents.find(
-      (a) =>
-        (a.email && a.email === clerkEmail) ||
-        (a.username && (a.username === clerkUsername || a.username === clerkEmail.split("@")[0]))
-    );
+    const matched = agents.find((a) => {
+      const aEmail = (a.email ?? "").toLowerCase();
+      const aUsername = (a.username ?? "").toLowerCase();
+      if (aEmail && aEmail === clerkEmail) return true;
+      if (aUsername && aUsername === clerkUsername) return true;
+      return false;
+    });
 
     if (matched) {
-      setCurrentRole(matched.role);
+      const validRole: Role =
+        matched.role === "super_admin" || matched.role === "admin" || matched.role === "moderator"
+          ? matched.role
+          : "moderator";
+      setCurrentRole(validRole);
       setCurrentAgent(matched);
-      return;
+      return true;
     }
 
-    // 3. Default: if the agents list exists and has a super_admin, check if current user is the first/only super_admin
-    // For Ben's single-user setup, default to super_admin
-    const superAdmins = agents.filter((a) => a.role === "super_admin");
-    if (superAdmins.length === 1 || agents.length === 0) {
-      // Only one super admin or no agents configured yet — current user is super admin
-      setCurrentRole("super_admin");
-      setCurrentAgent({
-        username: clerkUser.username ?? clerkEmail.split("@")[0] ?? "Admin",
-        email: clerkEmail,
-        role: "super_admin",
-      });
-      return;
-    }
-
-    // 4. Unknown user — most restrictive
+    // No agent row matches — user is not on the team.
     setCurrentRole("moderator");
-    setCurrentAgent({
-      username: clerkUser.username ?? "Unknown",
-      email: clerkEmail,
-      role: "moderator",
-    });
+    setCurrentAgent(null);
+    return false;
   };
 
   useEffect(() => {
@@ -103,14 +91,23 @@ export function RoleProvider({ children }: { children: ReactNode }) {
 
     const init = async () => {
       setLoading(true);
-      const agents = await fetchAgents();
-      if (user) {
-        resolveRole(user, agents);
+      if (!user) {
+        setLoading(false);
+        return;
       }
+      const agents = await fetchAgents();
+      const onTeam = resolveRole(user, agents);
       setLoading(false);
+
+      // Bounce non-team members away from the rest of the dashboard.
+      const isBypassed = TEAM_BYPASS_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+      if (!onTeam && !isBypassed) {
+        router.replace("/not-on-team");
+      }
     };
 
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, user?.id]);
 
   return (
