@@ -72,7 +72,7 @@ export default function AcceptInvitePage() {
         return;
       }
       setDone(true);
-      setTimeout(() => router.push("/"), 1500);
+      setTimeout(() => router.push("/tickets"), 1500);
     } catch (e) {
       setError("Network error. Please try again.");
       setSubmitting(false);
