@@ -153,11 +153,9 @@ export const api = {
   },
   cancelInvite: (id: string) => apiFetch(`/api/invites/${id}`, { method: "DELETE" }),
 
-  // Ownership transfer
+  // Ownership transfer (instant — current backend has no pending state, so no cancel endpoint)
   transferOwnership: (toEmail: string) =>
     apiFetch("/api/invites/transfer-ownership", { method: "POST", body: JSON.stringify({ email: toEmail }) }),
-  cancelOwnershipTransfer: (id: string) =>
-    apiFetch(`/api/invites/transfer-ownership/${id}`, { method: "DELETE" }),
 
   // Agent role management
   updateAgentRole: (username: string, role: Role) =>

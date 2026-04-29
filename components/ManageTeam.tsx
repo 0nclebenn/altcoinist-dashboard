@@ -279,11 +279,10 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
   async function handleCancelInvite(invite: Invite) {
     setCancelingInvite((prev) => ({ ...prev, [invite.id]: true }));
     try {
-      if (invite.type === "ownership_transfer") {
-        await api.cancelOwnershipTransfer(invite.id);
-      } else {
-        await api.cancelInvite(invite.id);
-      }
+      // Both regular invites and (legacy) ownership_transfer rows cancel through
+      // the same DELETE /api/invites/{id} endpoint — backend has no separate
+      // transfer-cancel route since transfer is instant.
+      await api.cancelInvite(invite.id);
       setInvites((prev) => prev.filter((i) => i.id !== invite.id));
     } catch {
       // Keep in list on error
