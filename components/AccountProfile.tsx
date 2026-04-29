@@ -133,6 +133,11 @@ export default function AccountProfile() {
   const [sigSaved, setSigSaved] = useState(false);
   const sigInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Profile photo state (Clerk-managed via user.setProfileImage) ──────────
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   const [profileLoaded, setProfileLoaded] = useState(false);
 
   // ── Load profile on mount ──────────────────────────────────────────────────
@@ -159,6 +164,58 @@ export default function AccountProfile() {
 
   useEffect(() => { if (tgEditing)  tgInputRef.current?.focus();  }, [tgEditing]);
   useEffect(() => { if (sigEditing) sigInputRef.current?.focus(); }, [sigEditing]);
+
+  // ── Profile photo handlers ────────────────────────────────────────────────
+
+  const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+
+  function pickPhoto() {
+    setPhotoError(null);
+    photoInputRef.current?.click();
+  }
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Reset the input so the same file can be re-selected after an error
+    if (e.target) e.target.value = "";
+    if (!file || !user) return;
+
+    if (!/^image\/(jpeg|png|jpg)$/i.test(file.type)) {
+      setPhotoError("Please choose a JPEG or PNG image.");
+      return;
+    }
+    if (file.size > PHOTO_MAX_BYTES) {
+      setPhotoError(`Image is ${(file.size / 1024 / 1024).toFixed(1)} MB. Max is 2 MB.`);
+      return;
+    }
+
+    setPhotoUploading(true);
+    setPhotoError(null);
+    try {
+      await user.setProfileImage({ file });
+      await user.reload();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to upload photo.";
+      setPhotoError(message);
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  async function handlePhotoDelete() {
+    if (!user) return;
+    setPhotoUploading(true);
+    setPhotoError(null);
+    try {
+      await user.setProfileImage({ file: null });
+      await user.reload();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to remove photo.";
+      setPhotoError(message);
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
 
   // ── Telegram handle handlers ───────────────────────────────────────────────
 
@@ -307,11 +364,31 @@ export default function AccountProfile() {
 
         <div className="flex items-center gap-5 mb-6">
           <Avatar imageUrl={user.imageUrl} initials={initials} />
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-sm text-gray-300 font-medium">Profile photo</p>
             <p className="mt-0.5 text-xs text-gray-500">
               JPEG or PNG, square dimensions, maximum 2 MB.
             </p>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={handlePhotoChange}
+                className="hidden"
+              />
+              <ActionButton onClick={pickPhoto} disabled={photoUploading} variant="primary">
+                {photoUploading ? "Uploading…" : user.hasImage ? "Change" : "Upload"}
+              </ActionButton>
+              {user.hasImage && (
+                <ActionButton onClick={handlePhotoDelete} disabled={photoUploading}>
+                  Remove
+                </ActionButton>
+              )}
+            </div>
+            {photoError && (
+              <p className="mt-2 text-xs text-red-400">{photoError}</p>
+            )}
           </div>
         </div>
 
