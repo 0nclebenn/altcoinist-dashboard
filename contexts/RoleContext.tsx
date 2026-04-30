@@ -53,20 +53,30 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   };
 
   // DB is the single source of truth for roles. Match the Clerk user to an
-  // agents row by email (preferred) or Telegram username. If neither hits,
-  // the user is not on the team — redirect them away.
+  // agents row by ANY of their Clerk email addresses (primary + secondaries),
+  // then fall back to Telegram username. If nothing matches, the user is not
+  // on the team — redirect them away.
   //
   // Clerk's publicMetadata.role is intentionally NOT consulted: it's set at
   // invite-accept time and goes stale after transfer-ownership / role updates.
   const resolveRole = (clerkUser: any, agents: AgentMember[]) => {
-    const clerkEmail = (clerkUser.primaryEmailAddress?.emailAddress ?? "").toLowerCase();
+    // Collect every email Clerk knows about for this user (not just primary).
+    // Some users sign up with one email and later add the invited email as a
+    // secondary — we need to match on either.
+    const clerkEmails = new Set<string>();
+    const primary = clerkUser.primaryEmailAddress?.emailAddress;
+    if (primary) clerkEmails.add(primary.toLowerCase());
+    for (const e of clerkUser.emailAddresses ?? []) {
+      const addr = e?.emailAddress;
+      if (addr) clerkEmails.add(addr.toLowerCase());
+    }
     const clerkUsername = (clerkUser.username ?? "").toLowerCase();
 
     const matched = agents.find((a) => {
       const aEmail = (a.email ?? "").toLowerCase();
       const aUsername = (a.username ?? "").toLowerCase();
-      if (aEmail && aEmail === clerkEmail) return true;
-      if (aUsername && aUsername === clerkUsername) return true;
+      if (aEmail && clerkEmails.has(aEmail)) return true;
+      if (aUsername && clerkUsername && aUsername === clerkUsername) return true;
       return false;
     });
 
