@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { api, Role, AgentMember, Invite } from "@/lib/api";
 import { useRole } from "@/contexts/RoleContext";
+import BrandSelect from "@/components/BrandSelect";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -365,14 +366,15 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
               placeholder="Email address"
               className="w-full bg-white/[0.02] border border-white/[0.08] text-white/90 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-400/40 placeholder-white/30"
             />
-            <select
+            <BrandSelect
               value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as "admin" | "moderator")}
-              className="w-full bg-white/[0.02] border border-white/[0.08] text-white/90 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-400/40"
-            >
-              <option value="admin">Admin</option>
-              <option value="moderator">Moderator</option>
-            </select>
+              onChange={(v) => setInviteRole(v as "admin" | "moderator")}
+              options={[
+                { value: "admin", label: "Admin" },
+                { value: "moderator", label: "Moderator" },
+              ]}
+              ariaLabel="Invite role"
+            />
             {inviteError && (
               <p className="text-xs text-red-400">{inviteError}</p>
             )}
@@ -438,20 +440,17 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
           </p>
           <form onSubmit={handleTransferOwnership} className="space-y-3">
             {eligibleAdmins.length > 0 ? (
-              <select
+              <BrandSelect
                 value={transferEmail}
-                onChange={(e) => setTransferEmail(e.target.value)}
-                required
-                className="w-full bg-white/[0.02] border border-white/[0.08] text-white/90 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-400/40"
-              >
-                <option value="">Select an admin to transfer to…</option>
-                {eligibleAdmins.map((a) => (
-                  <option key={a.username} value={a.email ?? a.username}>
-                    {a.display_name ?? a.username}
-                    {a.email ? ` (${a.email})` : ""}
-                  </option>
-                ))}
-              </select>
+                onChange={setTransferEmail}
+                placeholder="Select an admin to transfer to…"
+                options={eligibleAdmins.map((a) => ({
+                  value: a.email ?? a.username,
+                  label: a.display_name ?? `@${a.username}`,
+                  hint: a.email,
+                }))}
+                ariaLabel="Transfer ownership recipient"
+              />
             ) : (
               <input
                 type="email"
@@ -565,15 +564,19 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
 
                     {/* Editable member: role dropdown */}
                     {isEditable && member.role !== "super_admin" && (
-                      <select
-                        value={member.role}
-                        disabled={updatingRole}
-                        onChange={(e) => handleRoleChange(member.username, e.target.value as Role)}
-                        className="bg-white/[0.02] border border-white/[0.08] text-white/85 text-xs rounded-md px-2 py-1 focus:outline-none focus:border-brand-400/40 disabled:opacity-50"
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="moderator">Moderator</option>
-                      </select>
+                      <div className="w-32">
+                        <BrandSelect
+                          size="sm"
+                          value={member.role}
+                          disabled={updatingRole}
+                          onChange={(v) => handleRoleChange(member.username, v as Role)}
+                          options={[
+                            { value: "admin",     label: "Admin" },
+                            { value: "moderator", label: "Moderator" },
+                          ]}
+                          ariaLabel={`Change role for @${member.username}`}
+                        />
+                      </div>
                     )}
 
                     {/* Editable member: delete button — never on owner */}

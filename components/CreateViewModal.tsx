@@ -2,10 +2,30 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import BrandSelect from "@/components/BrandSelect";
 
-const STATUS_OPTIONS = ["open", "pending", "escalated", "resolved"];
-const PRIORITY_OPTIONS = ["high", "medium", "low"];
-const RESOLUTION_TYPE_OPTIONS = ["ai", "scripted", "human", "auto_timeout"];
+const STATUS_OPTIONS = [
+  { value: "", label: "Any status" },
+  { value: "open", label: "Open" },
+  { value: "pending", label: "Pending" },
+  { value: "escalated", label: "Escalated" },
+  { value: "resolved", label: "Resolved" },
+];
+
+const PRIORITY_OPTIONS = [
+  { value: "", label: "Any priority" },
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+];
+
+const RESOLUTION_TYPE_OPTIONS = [
+  { value: "", label: "Any resolution" },
+  { value: "ai", label: "AI" },
+  { value: "scripted", label: "Scripted" },
+  { value: "human", label: "Human" },
+  { value: "auto_timeout", label: "Auto-timeout" },
+];
 
 interface Props {
   onCreated: () => void;
@@ -40,63 +60,55 @@ export default function CreateViewModal({ onCreated, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-sm shadow-2xl"
+        className="card-base rounded-2xl p-6 w-full max-w-sm shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-semibold text-white mb-5">New View</h3>
+        <div className="inline-flex items-center gap-2 mb-2">
+          <span className="h-px w-6 bg-brand-400/40" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/80">// new view</span>
+        </div>
+        <h3 className="font-heading text-base font-semibold text-white mb-5">Create a saved view</h3>
 
-        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Name</label>
+        <label className="block font-mono text-[10px] uppercase tracking-[0.18em] text-white/40 mb-1.5">Name</label>
         <input
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
           placeholder="e.g. High Priority"
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white mb-4 focus:outline-none focus:border-indigo-500"
+          className="w-full bg-white/[0.02] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white mb-4 focus:outline-none focus:border-brand-400/40 placeholder-white/30"
         />
 
-        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Status</label>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 mb-4 focus:outline-none focus:border-indigo-500"
-        >
-          <option value="">Any status</option>
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <label className="block font-mono text-[10px] uppercase tracking-[0.18em] text-white/40 mb-1.5">Status</label>
+        <div className="mb-4">
+          <BrandSelect value={status} onChange={setStatus} options={STATUS_OPTIONS} ariaLabel="Filter by status" />
+        </div>
 
-        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Priority</label>
-        <select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 mb-4 focus:outline-none focus:border-indigo-500"
-        >
-          <option value="">Any priority</option>
-          {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
+        <label className="block font-mono text-[10px] uppercase tracking-[0.18em] text-white/40 mb-1.5">Priority</label>
+        <div className="mb-4">
+          <BrandSelect value={priority} onChange={setPriority} options={PRIORITY_OPTIONS} ariaLabel="Filter by priority" />
+        </div>
 
-        <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1">Resolution Type</label>
-        <select
-          value={resolutionType}
-          onChange={(e) => setResolutionType(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 mb-5 focus:outline-none focus:border-indigo-500"
-        >
-          <option value="">Any resolution</option>
-          {RESOLUTION_TYPE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <label className="block font-mono text-[10px] uppercase tracking-[0.18em] text-white/40 mb-1.5">Resolution type</label>
+        <div className="mb-5">
+          <BrandSelect value={resolutionType} onChange={setResolutionType} options={RESOLUTION_TYPE_OPTIONS} ariaLabel="Filter by resolution type" />
+        </div>
 
         {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
 
         <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+          <button
+            onClick={onClose}
+            className="font-mono text-[10px] uppercase tracking-wider text-white/55 hover:text-white border border-white/[0.08] hover:border-white/20 rounded-full px-4 py-2 transition-all"
+          >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg disabled:opacity-50 transition-colors"
+            className="px-5 py-2 text-sm bg-brand-400 hover:bg-brand-300 text-black font-bold rounded-full disabled:opacity-50 transition-all"
           >
             {saving ? "Saving…" : "Save View"}
           </button>
