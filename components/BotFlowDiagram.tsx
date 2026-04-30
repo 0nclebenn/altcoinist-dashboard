@@ -186,7 +186,7 @@ export default function BotFlowDiagram() {
     );
   }
   if (!tree || path.length === 0) {
-    return <p className="text-gray-500 text-sm">Loading flow…</p>;
+    return <p className="font-mono text-[10px] uppercase tracking-wider text-white/30">Loading flow…</p>;
   }
 
   return (
@@ -195,7 +195,7 @@ export default function BotFlowDiagram() {
       <div className="flex items-start justify-between gap-4 mb-6 max-w-3xl mx-auto">
         <div className="flex-1">
           <h2 className="text-lg font-semibold mb-1">Bot Flow</h2>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-white/55">
             Click a button to drill into the next step. Click again to collapse.
             Run analysis to surface gaps where users hit &quot;Something Else&quot;.
           </p>
@@ -203,14 +203,14 @@ export default function BotFlowDiagram() {
         <button
           onClick={handleRunAnalysis}
           disabled={running}
-          className="flex-shrink-0 px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg disabled:opacity-50 transition-colors"
+          className="flex-shrink-0 px-3 py-1.5 text-xs bg-brand-400 hover:bg-brand-300 text-black font-bold rounded-lg disabled:opacity-50 transition-colors"
         >
           {running ? "Running…" : "Run analysis now"}
         </button>
       </div>
 
       {analysisMsg && (
-        <div className="max-w-3xl mx-auto mb-4 px-3 py-2 text-xs text-indigo-200 bg-indigo-900/40 border border-indigo-800/60 rounded">
+        <div className="max-w-3xl mx-auto mb-4 px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-brand-300 bg-brand-400/[0.06] border border-brand-400/20 rounded">
           {analysisMsg}
         </div>
       )}
@@ -277,7 +277,7 @@ function StateCard({ node, isRoot, title: titleOverride }: { node: FlowNode; isR
     ? "border-orange-700/50"
     : node.scripted_reply
     ? "border-emerald-700/50"
-    : "border-gray-700";
+    : "border-white/[0.08]";
 
   const title = isRoot
     ? "Initial Message"
@@ -288,11 +288,11 @@ function StateCard({ node, isRoot, title: titleOverride }: { node: FlowNode; isR
     node.ai ? "bg-purple-500" :
     node.escalate ? "bg-orange-500" :
     node.scripted_reply ? "bg-emerald-500" :
-    isRoot ? "bg-indigo-500" :
+    isRoot ? "bg-brand-400" :
     "bg-gray-400";
 
   return (
-    <div className={`w-full max-w-2xl rounded-xl border ${cardTone} bg-gray-900 p-5`}>
+    <div className={`w-full max-w-2xl rounded-2xl border ${cardTone} card-base p-5 group relative overflow-hidden`}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <span className={`w-2 h-2 rounded-full ${dotColor}`} />
@@ -301,12 +301,12 @@ function StateCard({ node, isRoot, title: titleOverride }: { node: FlowNode; isR
         {node.escalate && <NodeBadge color="orange">Escalate</NodeBadge>}
         {node.terminal && <NodeBadge color="gray">Terminal</NodeBadge>}
         {node.collect_text && <NodeBadge color="blue">Collects text</NodeBadge>}
-        <span className="ml-auto text-[10px] font-mono text-gray-500">{node.state}</span>
+        <span className="ml-auto text-[10px] font-mono text-white/40">{node.state}</span>
       </div>
 
       {/* Bot message */}
       {node.message && (
-        <div className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-2.5 mb-3">
+        <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 mb-3">
           <p className="text-sm text-gray-200 whitespace-pre-wrap">{node.message}</p>
         </div>
       )}
@@ -343,7 +343,7 @@ function StateCard({ node, isRoot, title: titleOverride }: { node: FlowNode; isR
       )}
 
       {/* Metadata strip — Mava-style pills */}
-      <div className="flex items-center gap-3 text-[10px] text-gray-500">
+      <div className="flex items-center gap-3 text-[10px] text-white/40">
         <MetaPill label="Category" value={node.tags[0]} />
         <MetaPill label="Tag"      value={node.tags[1]} />
         <MetaPill label="Priority" value={node.escalate ? "high" : node.ai ? "medium" : "low"} />
@@ -365,7 +365,7 @@ function StateCard({ node, isRoot, title: titleOverride }: { node: FlowNode; isR
 function MetaPill({ label, value }: { label: string; value?: string }) {
   return (
     <span className="inline-flex items-center gap-1">
-      <span className="text-gray-500">{label}</span>
+      <span className="text-white/40">{label}</span>
       <span className="text-gray-300 bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded">
         {value || "—"}
       </span>
@@ -447,8 +447,8 @@ function ButtonRow({
                 onClick={() => onClick(b.target)}
                 className={`inline-flex items-center gap-2 px-3 h-8 text-xs rounded-lg border transition-colors ${
                   selected === b.target
-                    ? "bg-indigo-600 border-indigo-500 text-white"
-                    : "bg-gray-900 border-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-800"
+                    ? "bg-brand-400 border-brand-400 text-black"
+                    : "bg-white/[0.02] border-white/[0.08] text-white/85 hover:border-brand-400/40 hover:bg-white/[0.04]"
                 }`}
               >
                 <DragHandle />
@@ -489,7 +489,7 @@ function ButtonRow({
 
 function DragHandle() {
   return (
-    <span className="text-gray-500 select-none" aria-hidden="true">⋮⋮</span>
+    <span className="text-white/40 select-none" aria-hidden="true">⋮⋮</span>
   );
 }
 

@@ -16,14 +16,14 @@ function Avatar({ imageUrl, initials }: { imageUrl?: string; initials: string })
         src={imageUrl}
         alt="Profile avatar"
         onError={() => setImgError(true)}
-        className="h-20 w-20 rounded-full object-cover ring-2 ring-gray-700"
+        className="h-20 w-20 rounded-full object-cover border-2 border-brand-400/30"
       />
     );
   }
 
   return (
-    <div className="h-20 w-20 rounded-full bg-blue-900 ring-2 ring-gray-700 flex items-center justify-center flex-shrink-0">
-      <span className="text-xl font-semibold text-blue-200 select-none">
+    <div className="h-20 w-20 rounded-full bg-brand-400/10 border-2 border-brand-400/30 flex items-center justify-center flex-shrink-0">
+      <span className="font-heading text-xl font-bold text-brand-400 select-none">
         {initials}
       </span>
     </div>
@@ -34,7 +34,7 @@ function Avatar({ imageUrl, initials }: { imageUrl?: string; initials: string })
 
 function VerifiedBadge() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-green-900/50 border border-green-700/50 px-2 py-0.5 text-xs font-medium text-green-400">
+    <span className="inline-flex items-center gap-1 rounded-full bg-brand-400/[0.08] border border-brand-400/20 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-brand-400">
       <svg
         className="h-3 w-3"
         viewBox="0 0 12 12"
@@ -57,9 +57,20 @@ function VerifiedBadge() {
 
 // ── Card wrapper ─────────────────────────────────────────────────────────────
 
-function Card({ children }: { children: React.ReactNode }) {
+function Card({ eyebrow, children }: { eyebrow?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+    <div className="card-base rounded-2xl p-6 group relative overflow-hidden">
+      {/* Watermark */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-4 right-4 w-7 h-7 rounded-md bg-brand-400 opacity-[0.06] group-hover:opacity-[0.12] transition-opacity flex items-center justify-center text-black font-bold font-heading text-xs"
+      >A</div>
+      {eyebrow && (
+        <div className="inline-flex items-center gap-2 mb-2">
+          <span className="h-px w-6 bg-brand-400/40" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/80">{eyebrow}</span>
+        </div>
+      )}
       {children}
     </div>
   );
@@ -67,7 +78,7 @@ function Card({ children }: { children: React.ReactNode }) {
 
 function CardTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-base font-semibold text-white mb-4">{children}</h2>
+    <h2 className="font-heading text-base font-semibold text-white mb-5">{children}</h2>
   );
 }
 
@@ -89,10 +100,10 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+      className={`rounded-full px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
         variant === "primary"
-          ? "bg-blue-600 text-white hover:bg-blue-700"
-          : "border border-gray-700 text-gray-300 hover:border-gray-600 hover:text-white bg-transparent"
+          ? "bg-brand-400 hover:bg-brand-300 text-black font-bold"
+          : "border border-white/[0.08] text-white/55 hover:text-brand-400 hover:border-brand-400/30"
       }`}
     >
       {children}
@@ -320,12 +331,12 @@ export default function AccountProfile() {
       <div className="max-w-2xl space-y-6">
         <Card>
           <div className="animate-pulse space-y-4">
-            <div className="h-4 w-32 rounded bg-gray-800" />
+            <div className="h-4 w-32 rounded bg-white/[0.04]" />
             <div className="flex gap-4">
-              <div className="h-20 w-20 rounded-full bg-gray-800" />
+              <div className="h-20 w-20 rounded-full bg-white/[0.04]" />
               <div className="flex-1 space-y-3 pt-2">
-                <div className="h-3 w-48 rounded bg-gray-800" />
-                <div className="h-3 w-64 rounded bg-gray-800" />
+                <div className="h-3 w-48 rounded bg-white/[0.04]" />
+                <div className="h-3 w-64 rounded bg-white/[0.04]" />
               </div>
             </div>
           </div>
@@ -338,7 +349,7 @@ export default function AccountProfile() {
     return (
       <div className="max-w-2xl">
         <Card>
-          <p className="text-sm text-gray-400">No user session found. Please sign in.</p>
+          <p className="text-sm text-white/55">No user session found. Please sign in.</p>
         </Card>
       </div>
     );
@@ -359,15 +370,15 @@ export default function AccountProfile() {
   return (
     <div className="max-w-2xl space-y-6">
       {/* ── Account & Login ────────────────────────────────────────────────── */}
-      <Card>
+      <Card eyebrow="// account">
         <CardTitle>Account &amp; Login</CardTitle>
 
         <div className="flex items-center gap-5 mb-6">
           <Avatar imageUrl={user.imageUrl} initials={initials} />
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-gray-300 font-medium">Profile photo</p>
-            <p className="mt-0.5 text-xs text-gray-500">
-              JPEG or PNG, square dimensions, maximum 2 MB.
+            <p className="text-sm text-white/85 font-heading font-medium">Profile photo</p>
+            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-white/40">
+              JPEG or PNG · max 2 MB
             </p>
             <div className="mt-2 flex items-center gap-2">
               <input
@@ -395,7 +406,7 @@ export default function AccountProfile() {
         <div className="space-y-4">
           {/* Email */}
           <div className="flex items-center justify-between gap-4 min-h-[36px]">
-            <span className="text-sm text-gray-400 flex-shrink-0 w-32">Email address</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40 flex-shrink-0 w-32">Email address</span>
             <div className="flex flex-1 items-center gap-2 justify-end">
               <span className="text-sm text-white truncate">{email}</span>
               <VerifiedBadge />
@@ -404,12 +415,12 @@ export default function AccountProfile() {
 
           {/* Telegram handle */}
           <div className="flex items-center justify-between gap-4 min-h-[36px]">
-            <span className="text-sm text-gray-400 flex-shrink-0 w-32">Telegram handle</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40 flex-shrink-0 w-32">Telegram handle</span>
 
             {tgEditing ? (
               <div className="flex flex-1 items-center gap-2 justify-end">
-                <div className="flex flex-1 items-center min-w-0 rounded-lg border border-gray-700 bg-gray-950 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-                  <span className="pl-3 pr-1 text-sm text-gray-500 select-none">@</span>
+                <div className="flex flex-1 items-center min-w-0 rounded-lg border border-white/[0.08] bg-white/[0.02] focus-within:border-brand-400/40">
+                  <span className="pl-3 pr-1 text-sm text-white/40 select-none">@</span>
                   <input
                     ref={tgInputRef}
                     type="text"
@@ -420,7 +431,7 @@ export default function AccountProfile() {
                       if (e.key === "Escape") handleTgCancel();
                     }}
                     placeholder="your_handle"
-                    className="flex-1 min-w-0 bg-transparent py-1.5 pr-3 text-sm text-white placeholder-gray-600 focus:outline-none"
+                    className="flex-1 min-w-0 bg-transparent py-1.5 pr-3 text-sm text-white placeholder-white/30 focus:outline-none"
                   />
                 </div>
                 <ActionButton onClick={handleTgSave} disabled={tgSaving} variant="primary">
@@ -431,14 +442,14 @@ export default function AccountProfile() {
             ) : (
               <div className="flex flex-1 items-center gap-2 justify-end">
                 {tgSaved ? (
-                  <span className="text-sm text-green-400">Saved!</span>
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-brand-400">Saved!</span>
                 ) : tgValue ? (
                   <>
                     <span className="text-sm text-white truncate">@{tgValue}</span>
                     {tgVerified && <VerifiedBadge />}
                   </>
                 ) : (
-                  <span className="text-sm text-gray-500 italic">
+                  <span className="text-sm text-white/40 italic">
                     {profileLoaded ? "Not set" : "Loading…"}
                   </span>
                 )}
@@ -454,9 +465,9 @@ export default function AccountProfile() {
       </Card>
 
       {/* ── Custom Signature ──────────────────────────────────────────────── */}
-      <Card>
+      <Card eyebrow="// signature">
         <CardTitle>Custom Signature</CardTitle>
-        <p className="text-xs text-gray-500 mb-5">
+        <p className="text-xs text-white/55 mb-5 leading-relaxed">
           Shown to users when you reply to their tickets. They&apos;ll see
           &ldquo;Support team ({sigValue || "your_signature"}): …&rdquo; on every message you send.
           Must be unique across the team.
@@ -464,7 +475,7 @@ export default function AccountProfile() {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-4 min-h-[36px]">
-            <span className="text-sm text-gray-400 flex-shrink-0 w-32">Signature</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40 flex-shrink-0 w-32">Signature</span>
 
             {sigEditing ? (
               <div className="flex flex-1 items-center gap-2 justify-end">
@@ -479,7 +490,7 @@ export default function AccountProfile() {
                   }}
                   placeholder="e.g. 0ncleben"
                   maxLength={50}
-                  className="flex-1 min-w-0 rounded-lg border border-gray-700 bg-gray-950 px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="flex-1 min-w-0 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-sm text-white placeholder-white/30 focus:border-brand-400/40 focus:outline-none"
                 />
                 <ActionButton onClick={handleSigSave} disabled={sigSaving} variant="primary">
                   {sigSaving ? "Saving…" : "Save"}
@@ -489,11 +500,11 @@ export default function AccountProfile() {
             ) : (
               <div className="flex flex-1 items-center gap-2 justify-end">
                 {sigSaved ? (
-                  <span className="text-sm text-green-400">Saved!</span>
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-brand-400">Saved!</span>
                 ) : sigValue ? (
                   <span className="text-sm text-white truncate">{sigValue}</span>
                 ) : (
-                  <span className="text-sm text-gray-500 italic">
+                  <span className="text-sm text-white/40 italic">
                     {profileLoaded ? "Not set" : "Loading…"}
                   </span>
                 )}
@@ -507,8 +518,8 @@ export default function AccountProfile() {
           )}
 
           {sigValue && !sigEditing && (
-            <p className="text-xs text-gray-500 mt-3">
-              Preview: <span className="text-gray-300">💬 Support team ({sigValue}): &lt;your message&gt;</span>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-white/35 mt-3">
+              Preview: <span className="text-white/70 normal-case tracking-normal">Support team ({sigValue}): &lt;your message&gt;</span>
             </p>
           )}
         </div>

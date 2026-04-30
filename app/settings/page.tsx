@@ -44,24 +44,37 @@ export default function SettingsPage() {
   if (roleLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500 text-sm">Loading…</p>
+        <p className="font-mono text-[10px] uppercase tracking-wider text-white/30">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-full p-8">
-      <h1 className="text-2xl font-bold mb-6">Settings</h1>
+    <div className="flex flex-col min-h-full p-8 max-w-[1200px]">
+      {/* Eyebrow + heading */}
+      <div className="inline-flex items-center gap-2 mb-3">
+        <span className="h-px w-6 bg-brand-400/40" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/80">
+          // configure your workspace
+        </span>
+      </div>
+      <h1
+        className="font-heading font-semibold gradient-heading leading-[1.05] mb-8"
+        style={{ fontSize: "clamp(1.8rem, 3vw, 2.4rem)" }}
+      >
+        Settings
+      </h1>
 
-      <div className="flex gap-1 border-b border-gray-800 mb-8">
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-white/[0.06] mb-8 overflow-x-auto">
         {visibleTabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2.5 text-sm font-medium font-heading transition-all border-b-2 -mb-px whitespace-nowrap ${
               activeTab === tab
-                ? "border-indigo-500 text-white"
-                : "border-transparent text-gray-400 hover:text-white"
+                ? "border-brand-400 text-white"
+                : "border-transparent text-white/45 hover:text-white"
             }`}
           >
             {tab}
@@ -72,10 +85,7 @@ export default function SettingsPage() {
       {activeTab === "Account" && <AccountProfile />}
 
       {activeTab === "Workspace" && (
-        <ManageTeam
-          currentRole={currentRole}
-          currentAgent={currentAgent}
-        />
+        <ManageTeam currentRole={currentRole} currentAgent={currentAgent} />
       )}
 
       {activeTab === "Knowledge Base" && (
@@ -83,34 +93,47 @@ export default function SettingsPage() {
           <div>
             {docUpdates.length > 0 && (
               <div className="mb-10">
-                <h2 className="text-lg font-semibold mb-4 text-green-400">
-                  📝 {docUpdates.length} Pending Doc Update{docUpdates.length !== 1 ? "s" : ""}
-                </h2>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="h-px w-6 bg-brand-400/40" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/80">
+                    // pending doc updates · {docUpdates.length}
+                  </span>
+                </div>
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 <DocUpdateSuggestions suggestions={docUpdates as any} />
               </div>
             )}
             {suggestions.length > 0 && (
               <div className="mb-10">
-                <h2 className="text-lg font-semibold mb-4 text-yellow-400">
-                  ⚡ {suggestions.length} Pending Suggestion{suggestions.length !== 1 ? "s" : ""}
-                </h2>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="h-px w-6 bg-[#E8B34B]/40" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#E8B34B]/80">
+                    // kb suggestions · {suggestions.length}
+                  </span>
+                </div>
                 <KBSuggestions suggestions={suggestions} />
               </div>
             )}
-            <h2 className="text-lg font-semibold mb-4">Scripted Replies</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="h-px w-6 bg-brand-400/40" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/80">
+                // scripted replies
+              </span>
+            </div>
             <div className="space-y-3">
               {replies.map((r) => {
                 const reply = r as { id: number };
                 return <KBEditor key={reply.id} reply={r} />;
               })}
               {replies.length === 0 && (
-                <p className="text-gray-500 text-sm">No scripted replies found.</p>
+                <p className="font-mono text-[10px] uppercase tracking-wider text-white/30">
+                  No scripted replies found.
+                </p>
               )}
             </div>
           </div>
         ) : (
-          <p className="text-gray-500 text-sm">Loading…</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-white/30">Loading…</p>
         )
       )}
 

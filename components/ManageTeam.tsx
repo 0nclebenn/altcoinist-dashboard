@@ -56,10 +56,10 @@ function Avatar({ member }: { member: AgentMember }) {
 
 function RoleBadge({ role }: { role: Role | "ownership_transfer" }) {
   const styles: Record<string, string> = {
-    super_admin: "bg-violet-900 text-violet-200 border border-violet-700",
-    admin: "bg-blue-900 text-blue-200 border border-blue-700",
-    moderator: "bg-gray-700 text-gray-200 border border-gray-600",
-    ownership_transfer: "bg-amber-900 text-amber-200 border border-amber-700",
+    super_admin: "bg-brand-400/[0.08] text-brand-400 border border-brand-400/30",
+    admin: "bg-brand-300/[0.06] text-brand-300 border border-brand-300/30",
+    moderator: "bg-[#E8B34B]/[0.06] text-[#E8B34B] border border-[#E8B34B]/30",
+    ownership_transfer: "bg-amber-400/[0.06] text-amber-300 border border-amber-400/30",
   };
   const labels: Record<string, string> = {
     super_admin: "Owner",
@@ -68,7 +68,7 @@ function RoleBadge({ role }: { role: Role | "ownership_transfer" }) {
     ownership_transfer: "Ownership Transfer",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${styles[role] ?? styles.moderator}`}>
+    <span className={`inline-flex items-center rounded font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 ${styles[role] ?? styles.moderator}`}>
       {labels[role] ?? role}
     </span>
   );
@@ -78,7 +78,7 @@ function RoleBadge({ role }: { role: Role | "ownership_transfer" }) {
 
 function SkeletonRow() {
   return (
-    <div className="flex items-center gap-4 px-4 py-4 border-b border-gray-800 last:border-0 animate-pulse">
+    <div className="flex items-center gap-4 px-4 py-4 border-b border-white/[0.04] last:border-0 animate-pulse">
       <div className="w-9 h-9 rounded-full bg-gray-700 flex-shrink-0" />
       <div className="flex-1 space-y-2">
         <div className="h-3 w-32 bg-gray-700 rounded" />
@@ -93,7 +93,7 @@ function SkeletonRow() {
 
 function FormCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-gray-900 border border-gray-700 rounded-xl p-5 ${className}`}>
+    <div className={`card-base rounded-2xl p-6 ${className}`}>
       {children}
     </div>
   );
@@ -335,7 +335,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white">Team</h2>
-          <p className="text-sm text-gray-400 mt-0.5">
+          <p className="text-sm text-white/55 mt-0.5">
             Manage your support team members and their roles.
           </p>
         </div>
@@ -345,7 +345,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
               setShowInviteForm((v) => !v);
               setShowTransferForm(false);
             }}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="bg-brand-400 hover:bg-brand-300 text-black font-bold rounded-full px-4 py-2 text-sm transition-all"
           >
             Invite People
           </button>
@@ -363,12 +363,12 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="Email address"
-              className="w-full bg-gray-800 border border-gray-700 text-gray-100 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-gray-500"
+              className="w-full bg-white/[0.02] border border-white/[0.08] text-white/90 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-400/40 placeholder-white/30"
             />
             <select
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as "admin" | "moderator")}
-              className="w-full bg-gray-800 border border-gray-700 text-gray-100 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full bg-white/[0.02] border border-white/[0.08] text-white/90 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-brand-400/40"
             >
               <option value="admin">Admin</option>
               <option value="moderator">Moderator</option>
@@ -380,14 +380,14 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
               <p className="text-xs text-emerald-400">{inviteSuccess}</p>
             )}
             {inviteLink && (
-              <div className="mt-2 p-3 bg-gray-800 border border-gray-700 rounded-md space-y-2">
+              <div className="mt-2 p-3 bg-white/[0.02] border border-white/[0.08] rounded-lg space-y-2">
                 {inviteEmailDelivered === false && (
                   <p className="text-xs text-amber-400">
                     Email could not be delivered automatically. Copy the link below and share it directly:
                   </p>
                 )}
                 {inviteEmailDelivered === true && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-white/55">
                     Email sent. You can also share this link directly:
                   </p>
                 )}
@@ -396,13 +396,13 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                     type="text"
                     readOnly
                     value={inviteLink}
-                    className="flex-1 bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1 font-mono"
+                    className="flex-1 bg-white/[0.02] border border-white/[0.08] text-white/85 text-xs rounded px-2 py-1 font-mono"
                     onFocus={(e) => e.currentTarget.select()}
                   />
                   <button
                     type="button"
                     onClick={() => navigator.clipboard.writeText(inviteLink)}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                    className="bg-brand-400 hover:bg-brand-300 text-black font-bold rounded-full px-3 py-1 text-xs transition-all"
                   >
                     Copy
                   </button>
@@ -413,14 +413,14 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
               <button
                 type="submit"
                 disabled={inviteLoading || !inviteEmail.trim()}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="bg-brand-400 hover:bg-brand-300 disabled:opacity-40 text-black font-bold rounded-full px-4 py-2 text-sm transition-all"
               >
                 {inviteLoading ? "Sending…" : "Send Invite"}
               </button>
               <button
                 type="button"
                 onClick={resetInviteForm}
-                className="text-gray-400 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-gray-700 hover:border-gray-500"
+                className="text-white/55 hover:text-white px-4 py-2 rounded-full text-sm font-medium transition-all border border-white/[0.08] hover:border-white/20"
               >
                 Cancel
               </button>
@@ -442,7 +442,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                 value={transferEmail}
                 onChange={(e) => setTransferEmail(e.target.value)}
                 required
-                className="w-full bg-gray-800 border border-gray-700 text-gray-100 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="w-full bg-white/[0.02] border border-white/[0.08] text-white/90 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-400/40"
               >
                 <option value="">Select an admin to transfer to…</option>
                 {eligibleAdmins.map((a) => (
@@ -459,11 +459,11 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                 value={transferEmail}
                 onChange={(e) => setTransferEmail(e.target.value)}
                 placeholder="Admin's email address"
-                className="w-full bg-gray-800 border border-gray-700 text-gray-100 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500 placeholder-gray-500"
+                className="w-full bg-white/[0.02] border border-white/[0.08] text-white/90 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-400/40 placeholder-white/30"
               />
             )}
             {eligibleAdmins.length === 0 && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-white/40">
                 No admins found. Enter an email manually — they must already be a team admin.
               </p>
             )}
@@ -484,7 +484,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
               <button
                 type="button"
                 onClick={resetTransferForm}
-                className="text-gray-400 hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-gray-700 hover:border-gray-500"
+                className="text-white/55 hover:text-white px-4 py-2 rounded-full text-sm font-medium transition-all border border-white/[0.08] hover:border-white/20"
               >
                 Cancel
               </button>
@@ -495,10 +495,10 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
 
       {/* ── Active members ── */}
       <div>
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+        <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/80 mb-3">
           Active members
         </h3>
-        <div className="bg-gray-950 rounded-xl border border-gray-800 overflow-hidden">
+        <div className="card-base rounded-2xl overflow-hidden">
           {membersLoading ? (
             <>
               <SkeletonRow />
@@ -508,7 +508,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
           ) : membersError ? (
             <p className="px-4 py-6 text-sm text-red-400">Failed to load team members.</p>
           ) : members.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-gray-500">No team members yet.</p>
+            <p className="px-4 py-6 font-mono text-[10px] uppercase tracking-wider text-white/30">No team members yet.</p>
           ) : (
             members.map((member) => {
               const isEditable = canEditMember(member);
@@ -521,7 +521,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
               return (
                 <div
                   key={member.username}
-                  className="flex items-center gap-3 border-b border-gray-800 last:border-0 px-4 py-4"
+                  className="flex items-center gap-3 border-b border-white/[0.04] last:border-0 px-4 py-4 hover:bg-white/[0.02] transition-colors"
                 >
                   {/* Avatar */}
                   <Avatar member={member} />
@@ -534,11 +534,11 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                       </span>
                       <RoleBadge role={member.role} />
                       {isSelf(member) && (
-                        <span className="text-xs text-gray-500">(you)</span>
+                        <span className="font-mono text-[9px] uppercase tracking-wider text-white/30">(you)</span>
                       )}
                     </div>
                     {member.email && (
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{member.email}</p>
+                      <p className="font-mono text-[10px] text-white/35 truncate mt-0.5">{member.email}</p>
                     )}
                     {roleErr && (
                       <p className="text-xs text-red-400 mt-0.5">{roleErr}</p>
@@ -557,7 +557,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                           setShowTransferForm((v) => !v);
                           setShowInviteForm(false);
                         }}
-                        className="text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-md px-2 py-1 transition-colors"
+                        className="font-mono text-[10px] uppercase tracking-wider text-white/55 hover:text-brand-400 border border-white/[0.08] hover:border-brand-400/30 rounded-full px-3 py-1 transition-all"
                       >
                         Transfer Ownership
                       </button>
@@ -569,7 +569,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                         value={member.role}
                         disabled={updatingRole}
                         onChange={(e) => handleRoleChange(member.username, e.target.value as Role)}
-                        className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                        className="bg-white/[0.02] border border-white/[0.08] text-white/85 text-xs rounded-md px-2 py-1 focus:outline-none focus:border-brand-400/40 disabled:opacity-50"
                       >
                         <option value="admin">Admin</option>
                         <option value="moderator">Moderator</option>
@@ -604,10 +604,10 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
       {/* ── Pending invites ── */}
       {hasPendingItems && (
         <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/80 mb-3">
             Invites pending
           </h3>
-          <div className="bg-gray-950 rounded-xl border border-gray-800 overflow-hidden">
+          <div className="card-base rounded-2xl overflow-hidden">
             {[...pendingInvites, ...pendingTransfers].map((invite) => {
               const isCanceling = cancelingInvite[invite.id] ?? false;
               const isTransfer = invite.type === "ownership_transfer";
@@ -615,7 +615,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
               return (
                 <div
                   key={invite.id}
-                  className="flex items-center gap-3 border-b border-gray-800 last:border-0 px-4 py-4"
+                  className="flex items-center gap-3 border-b border-white/[0.04] last:border-0 px-4 py-4 hover:bg-white/[0.02] transition-colors"
                 >
                   {/* Initials avatar for invitee */}
                   <div
@@ -634,7 +634,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                         <RoleBadge role={invite.role} />
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="font-mono text-[10px] text-white/35 mt-0.5">
                       {isTransfer ? "Requested by" : "Invited by"}: {invite.invited_by}
                       {invite.created_at && (
                         <span className="ml-2">
@@ -654,7 +654,7 @@ export default function ManageTeam({ currentRole, currentAgent }: ManageTeamProp
                     <button
                       onClick={() => handleCancelInvite(invite)}
                       disabled={isCanceling}
-                      className="text-gray-400 hover:text-red-400 text-xs disabled:opacity-40 transition-colors flex-shrink-0"
+                      className="font-mono text-[10px] uppercase tracking-wider text-red-400/70 hover:text-red-400 border border-red-400/15 hover:border-red-400/30 rounded-full px-3 py-1 disabled:opacity-40 transition-all flex-shrink-0"
                     >
                       {isCanceling ? "Canceling…" : "Cancel"}
                     </button>
