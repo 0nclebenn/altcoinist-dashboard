@@ -83,13 +83,13 @@ export default function TicketViewsSidebar({ activeViewId, onSelect, onNewView, 
   }
 
   return (
-    <div className="w-44 flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
-      <div className="px-3 pt-4 pb-2">
-        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Views</p>
+    <div className="w-48 flex-shrink-0 panel border-r border-white/[0.06] flex flex-col h-full">
+      <div className="px-4 pt-5 pb-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/60">// views</span>
       </div>
 
       <nav className="flex-1 overflow-y-auto">
-        {loading && <p className="px-4 py-2 text-xs text-gray-600">Loading…</p>}
+        {loading && <p className="px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-white/30">Loading…</p>}
         {allViews.map((view) => {
           const protectedView = PROTECTED_NAMES.has(view.name) || view.id === MY_TICKETS_VIEW_ID;
           const active = activeViewId === view.id;
@@ -98,15 +98,15 @@ export default function TicketViewsSidebar({ activeViewId, onSelect, onNewView, 
           return (
             <div
               key={view.id}
-              className={`group flex items-center text-sm transition-colors border-l-2 ${
+              className={`group flex items-center text-sm transition-all border-l-2 ${
                 active
-                  ? "bg-gray-800 border-indigo-500 text-white"
-                  : "border-transparent text-gray-400 hover:text-white hover:bg-gray-800"
+                  ? "bg-brand-400/[0.06] border-brand-400 text-white"
+                  : "border-transparent text-white/55 hover:text-white hover:bg-white/[0.02]"
               }`}
             >
               <button
                 onClick={() => onSelect(view)}
-                className="flex-1 text-left px-4 py-2 truncate"
+                className="flex-1 text-left px-4 py-2 truncate font-heading"
               >
                 {view.name}
               </button>
@@ -116,10 +116,10 @@ export default function TicketViewsSidebar({ activeViewId, onSelect, onNewView, 
                   onMouseLeave={() => confirming && setConfirmId(null)}
                   disabled={busy}
                   title={confirming ? "Click again to confirm" : "Delete view"}
-                  className={`flex-shrink-0 px-2 py-1 mr-1 rounded text-[10px] transition-all ${
+                  className={`flex-shrink-0 px-2 py-1 mr-1 rounded font-mono text-[10px] uppercase tracking-wider transition-all ${
                     confirming
-                      ? "text-red-300 bg-red-900/40 opacity-100"
-                      : "text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                      ? "text-red-300 bg-red-400/[0.1] opacity-100"
+                      : "text-white/30 hover:text-red-400 opacity-0 group-hover:opacity-100"
                   } disabled:opacity-50`}
                 >
                   {busy ? "…" : confirming ? "Confirm?" : "×"}
@@ -130,10 +130,10 @@ export default function TicketViewsSidebar({ activeViewId, onSelect, onNewView, 
         })}
       </nav>
 
-      <div className="p-3 border-t border-gray-800">
+      <div className="p-3 border-t border-white/[0.06]">
         <button
           onClick={onNewView}
-          className="text-xs text-gray-500 hover:text-indigo-400 transition-colors"
+          className="font-mono text-[11px] uppercase tracking-[0.15em] text-white/40 hover:text-brand-400 transition-colors"
         >
           + New View
         </button>

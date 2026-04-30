@@ -25,23 +25,72 @@ function defaultRange(): { from: string; to: string } {
 }
 
 // ---------------------------------------------------------------------------
+// Eyebrow — reusable section label
+// ---------------------------------------------------------------------------
+
+function Eyebrow({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="h-px w-6 bg-brand-400/40" />
+      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/80">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Watermark — top-right brand letter on cards
+// ---------------------------------------------------------------------------
+
+function CardWatermark() {
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute top-3 right-3 w-7 h-7 rounded-md bg-brand-400 flex items-center justify-center text-black font-heading font-bold text-xs opacity-[0.06] group-hover:opacity-[0.12] transition-opacity"
+    >
+      A
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // StatCard
 // ---------------------------------------------------------------------------
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({
+  label,
+  value,
+  primary = false,
+}: {
+  label: string;
+  value: string | number;
+  primary?: boolean;
+}) {
   return (
-    <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
-      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-3xl font-bold text-white">{String(value)}</p>
+    <div className="card-base rounded-xl p-5 group relative overflow-hidden">
+      <CardWatermark />
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/40 mb-2">
+        {label}
+      </p>
+      <p
+        className={`font-heading text-3xl font-bold tracking-tight ${
+          primary ? "text-brand-400" : "text-white"
+        }`}
+      >
+        {String(value)}
+      </p>
     </div>
   );
 }
 
 function StatCardSkeleton() {
   return (
-    <div className="bg-gray-900 rounded-xl p-5 border border-gray-800 animate-pulse">
-      <div className="h-3 bg-gray-700 rounded w-3/4 mb-3" />
-      <div className="h-8 bg-gray-700 rounded w-1/2" />
+    <div className="card-base rounded-xl p-5 relative overflow-hidden">
+      <div className="animate-pulse">
+        <div className="h-2.5 bg-white/10 rounded w-3/4 mb-3" />
+        <div className="h-7 bg-white/10 rounded w-1/2" />
+      </div>
     </div>
   );
 }
@@ -118,14 +167,14 @@ function DateRangePicker({ fromDate, toDate, onChange }: DateRangePickerProps) {
   return (
     <div className="relative" ref={containerRef}>
       {/* Pill button */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <button
           onClick={() => setOpen((v) => !v)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 flex items-center gap-2 hover:bg-gray-750 hover:border-gray-600 transition-colors"
+          className="rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-white/80 flex items-center gap-2 hover:border-brand-400/40 hover:bg-brand-400/[0.04] hover:text-white transition-colors"
         >
           {/* Calendar icon */}
           <svg
-            className="w-4 h-4 text-gray-400 flex-shrink-0"
+            className="w-3.5 h-3.5 text-brand-400/70 flex-shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -143,7 +192,7 @@ function DateRangePicker({ fromDate, toDate, onChange }: DateRangePickerProps) {
         {/* Reset × */}
         <button
           onClick={reset}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-750 transition-colors leading-none"
+          className="rounded-full border border-white/[0.08] bg-white/[0.03] w-8 h-8 flex items-center justify-center text-sm text-white/50 hover:text-brand-400 hover:border-brand-400/40 transition-colors leading-none"
           title="Reset to last 14 days"
         >
           &times;
@@ -152,14 +201,14 @@ function DateRangePicker({ fromDate, toDate, onChange }: DateRangePickerProps) {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl p-4 w-72">
+        <div className="absolute right-0 top-full mt-2 z-50 panel border border-white/[0.08] rounded-xl shadow-2xl p-4 w-72">
           {/* Quick selects */}
           <div className="grid grid-cols-2 gap-1.5 mb-4">
             {quickOptions.map(({ label, action }) => (
               <button
                 key={label}
                 onClick={action}
-                className="text-xs text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-3 py-1.5 transition-colors text-left"
+                className="font-mono text-[11px] uppercase tracking-[0.12em] text-white/70 bg-white/[0.03] hover:bg-brand-400/[0.06] hover:text-brand-400 border border-white/[0.06] hover:border-brand-400/30 rounded-lg px-3 py-2 transition-colors text-left"
               >
                 {label}
               </button>
@@ -167,26 +216,26 @@ function DateRangePicker({ fromDate, toDate, onChange }: DateRangePickerProps) {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-gray-700 mb-4" />
+          <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent mb-4" />
 
           {/* Custom date inputs */}
           <div className="flex gap-3 mb-4">
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">From</label>
+              <label className="block font-mono text-[10px] uppercase tracking-[0.16em] text-white/40 mb-1.5">From</label>
               <input
                 type="date"
                 value={draftFrom}
                 onChange={(e) => setDraftFrom(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/90 focus:outline-none focus:border-brand-400/50"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">To</label>
+              <label className="block font-mono text-[10px] uppercase tracking-[0.16em] text-white/40 mb-1.5">To</label>
               <input
                 type="date"
                 value={draftTo}
                 onChange={(e) => setDraftTo(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1.5 text-sm text-white/90 focus:outline-none focus:border-brand-400/50"
               />
             </div>
           </div>
@@ -195,12 +244,27 @@ function DateRangePicker({ fromDate, toDate, onChange }: DateRangePickerProps) {
           <button
             onClick={applyCustom}
             disabled={!draftFrom || !draftTo}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors"
+            className="w-full bg-brand-400 hover:bg-brand-300 disabled:bg-white/10 disabled:text-white/30 text-black font-heading text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
           >
             Apply
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section divider — gradient line + eyebrow
+// ---------------------------------------------------------------------------
+
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 my-6">
+      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-400/80 whitespace-nowrap">
+        {label}
+      </span>
+      <span className="h-px flex-1 bg-gradient-to-r from-brand-400/20 via-white/[0.06] to-transparent" />
     </div>
   );
 }
@@ -238,13 +302,13 @@ export default function AnalyticsPage() {
     return () => { cancelled = true; };
   }, [fromDate, toDate]);
 
-  const statCards = [
+  const statCards: { label: string; value: string | number; primary?: boolean }[] = [
     { label: "Open Tickets",          value: stats?.open_tickets            ?? "—" },
     { label: "Escalated",             value: stats?.escalated_tickets       ?? "—" },
     { label: "Tickets This Week",     value: stats?.tickets_this_week       ?? "—" },
-    { label: "AI Resolution Rate",    value: stats?.ai_resolution_rate     != null ? `${stats.ai_resolution_rate}%`    : "—" },
+    { label: "AI Resolution Rate",    value: stats?.ai_resolution_rate     != null ? `${stats.ai_resolution_rate}%`    : "—", primary: true },
     { label: "Human Resolution Rate", value: stats?.human_resolution_rate  != null ? `${stats.human_resolution_rate}%` : "—" },
-    { label: "CSAT Score",            value: stats?.csat_score_pct         != null ? `${stats.csat_score_pct}%`        : "—" },
+    { label: "CSAT Score",            value: stats?.csat_score_pct         != null ? `${stats.csat_score_pct}%`        : "—", primary: true },
     { label: "CSAT Response Rate",    value: stats?.csat_response_rate     != null ? `${stats.csat_response_rate}%`    : "—" },
   ];
 
@@ -252,8 +316,17 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Analytics</h1>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-8">
+        <div className="flex flex-col gap-3">
+          <Eyebrow label="// support / analytics" />
+          <h1 className="gradient-heading font-heading text-4xl font-bold tracking-tight">
+            Analytics
+          </h1>
+          <p className="text-sm text-white/50 max-w-xl">
+            Live performance pulse across the Altcoinist Groupbot support pipeline.
+          </p>
+        </div>
         <DateRangePicker
           fromDate={fromDate}
           toDate={toDate}
@@ -261,27 +334,38 @@ export default function AnalyticsPage() {
         />
       </div>
 
+      {/* Section 01 — Overview */}
+      <SectionDivider label="// 01 / overview" />
+
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-4">
         {loading
           ? Array.from({ length: 7 }).map((_, i) => <StatCardSkeleton key={i} />)
-          : statCards.map(({ label, value }) => (
-              <StatCard key={label} label={label} value={value} />
+          : statCards.map(({ label, value, primary }) => (
+              <StatCard key={label} label={label} value={value} primary={primary} />
             ))}
       </div>
 
       {/* Week delta */}
       {!loading && weekDelta !== null && (
-        <p className="text-sm text-gray-400 mb-8">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/50 mb-2">
           {weekDelta >= 0
-            ? `▲ ${weekDelta} more tickets than last week`
-            : `▼ ${Math.abs(weekDelta)} fewer tickets than last week`}
+            ? <><span className="text-brand-400">&#9650;</span> {weekDelta} more tickets than last week</>
+            : <><span className="text-amber-400">&#9660;</span> {Math.abs(weekDelta)} fewer tickets than last week</>}
         </p>
       )}
 
+      {/* Section 02 — Trends */}
+      <SectionDivider label="// 02 / trends" />
+
       {/* Charts / error */}
       {!loading && error && (
-        <p className="text-yellow-400 text-sm mt-4">&#9888;&#65039; Could not reach the backend.</p>
+        <div className="card-base rounded-2xl p-6 group relative overflow-hidden">
+          <CardWatermark />
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-amber-400">
+            &#9888;&#65039; Could not reach the backend.
+          </p>
+        </div>
       )}
       {!loading && !error && data && <Charts data={data} />}
     </div>

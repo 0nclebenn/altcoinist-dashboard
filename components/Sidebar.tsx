@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useClerk } from "@clerk/nextjs";
 import { useRole } from "@/contexts/RoleContext";
@@ -49,31 +48,11 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="fixed top-0 left-0 h-full w-14 bg-gray-900 border-r border-gray-800 flex flex-col items-center">
+    <aside className="fixed top-0 left-0 h-full w-14 bg-[rgba(8,8,8,0.85)] border-r border-white/[0.06] backdrop-blur-xl flex flex-col items-center z-40">
       {/* Logo */}
       <div className="py-4 flex justify-center">
-        <div className="w-9 h-9 rounded-lg overflow-hidden bg-black flex items-center justify-center">
-          <Image
-            src="/altcoinist-logo.svg"
-            alt="Altcoinist"
-            width={36}
-            height={36}
-            onError={(e) => {
-              const target = e.currentTarget as HTMLImageElement;
-              target.style.display = "none";
-              const parent = target.parentElement;
-              if (parent) {
-                parent.style.backgroundColor = "#00FF7F";
-                parent.textContent = "A";
-                parent.style.color = "#000";
-                parent.style.fontWeight = "bold";
-                parent.style.fontSize = "18px";
-                parent.style.display = "flex";
-                parent.style.alignItems = "center";
-                parent.style.justifyContent = "center";
-              }
-            }}
-          />
+        <div className="w-9 h-9 rounded-lg bg-brand-400 flex items-center justify-center text-black font-bold text-lg shadow-[0_0_20px_rgba(56,255,147,0.25)] select-none">
+          A
         </div>
       </div>
 
@@ -86,10 +65,10 @@ export default function Sidebar() {
               key={href}
               href={href}
               title={label}
-              className={`flex justify-center rounded-lg p-2 transition-colors w-full ${
+              className={`flex justify-center rounded-lg p-2 transition-all duration-300 w-full border ${
                 active
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-500 hover:text-white hover:bg-gray-800"
+                  ? "bg-brand-400/[0.08] text-brand-400 border-brand-400/20"
+                  : "text-white/35 hover:text-white hover:bg-white/[0.03] border-transparent"
               }`}
             >
               {icon}
@@ -103,7 +82,7 @@ export default function Sidebar() {
         <button
           onClick={() => clerk.signOut()}
           title="Sign out"
-          className="text-gray-600 hover:text-red-400 rounded-lg p-2 flex justify-center transition-colors w-full"
+          className="text-white/30 hover:text-red-400 rounded-lg p-2 flex justify-center transition-colors w-full"
         >
           <LogoutIcon />
         </button>

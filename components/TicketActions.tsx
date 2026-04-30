@@ -98,8 +98,8 @@ function Pill({ icon, label, loading, open, onToggle, children, containerRef }: 
         disabled={loading}
         className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs transition-colors ${
           open
-            ? "bg-gray-800 border-indigo-500 text-white"
-            : "bg-gray-900 border-gray-700 text-gray-200 hover:border-gray-500 hover:bg-gray-800"
+            ? "bg-brand-400 border-brand-400 text-black"
+            : "bg-white/[0.02] border-white/[0.08] text-white/85 hover:border-brand-400/40 hover:bg-white/[0.04]"
         } disabled:opacity-50`}
       >
         <span className="flex items-center gap-1.5 truncate max-w-[140px]">
@@ -109,7 +109,7 @@ function Pill({ icon, label, loading, open, onToggle, children, containerRef }: 
         <Chevron open={open} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 z-50 w-56 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 max-h-72 overflow-y-auto">
+        <div className="absolute right-0 top-full mt-1.5 z-50 w-56 panel border border-white/[0.08] rounded-lg shadow-xl py-1 max-h-72 overflow-y-auto">
           {children}
         </div>
       )}
@@ -144,8 +144,8 @@ function DropdownItem({
       type="button"
       onClick={onClick}
       className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors ${
-        active ? "bg-gray-800 text-white" : "text-gray-200 hover:bg-gray-800"
-      } ${tone === "muted" ? "text-gray-500 hover:text-gray-300" : ""}`}
+        active ? "bg-brand-400/[0.08] text-white" : "text-white/80 hover:bg-white/[0.04]"
+      } ${tone === "muted" ? "text-white/45 hover:text-white/70" : ""}`}
     >
       {children}
     </button>
@@ -189,11 +189,11 @@ function CategoryIcon() {
 
 function StatusDot({ value }: { value: string }) {
   const color =
-    value === "open" ? "text-blue-400" :
+    value === "open" ? "text-brand-400" :
     value === "escalated" ? "text-red-400" :
-    value === "resolved" ? "text-green-400" :
-    value === "pending" ? "text-yellow-400" :
-    "text-gray-400";
+    value === "resolved" ? "text-brand-500" :
+    value === "pending" ? "text-[#E8B34B]" :
+    "text-white/40";
   return (
     <svg width="10" height="10" viewBox="0 0 10 10" className={`flex-shrink-0 ${color}`}>
       <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
@@ -204,7 +204,7 @@ function StatusDot({ value }: { value: string }) {
 
 function CloseX() {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" className="flex-shrink-0 text-gray-500">
+    <svg width="10" height="10" viewBox="0 0 10 10" className="flex-shrink-0 text-white/45">
       <path d="M2 2 L8 8 M8 2 L2 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
@@ -346,12 +346,12 @@ export default function TicketActions({
         open={openPill === "agent"}
         onToggle={() => togglePill("agent")}
       >
-        <div className="px-2 py-1.5 sticky top-0 bg-gray-900 border-b border-gray-800">
+        <div className="px-2 py-1.5 sticky top-0 bg-black/80 backdrop-blur border-b border-white/[0.06]">
           <input
             value={agentSearch}
             onChange={(e) => setAgentSearch(e.target.value)}
             placeholder="Agent…"
-            className="w-full bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-white/[0.02] border border-white/[0.08] text-white/90 text-xs rounded px-2 py-1 focus:outline-none focus:border-brand-400/40"
           />
         </div>
         {agent && (
@@ -361,7 +361,7 @@ export default function TicketActions({
           </DropdownItem>
         )}
         {filteredAgents.length === 0 && (
-          <p className="px-3 py-2 text-xs text-gray-500 italic">No agents found</p>
+          <p className="px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-white/35 italic">No agents found</p>
         )}
         {filteredAgents.map((a) => (
           <DropdownItem
@@ -407,12 +407,12 @@ export default function TicketActions({
         open={openPill === "category"}
         onToggle={() => togglePill("category")}
       >
-        <div className="px-2 py-1.5 sticky top-0 bg-gray-900 border-b border-gray-800">
+        <div className="px-2 py-1.5 sticky top-0 bg-black/80 backdrop-blur border-b border-white/[0.06]">
           <input
             value={categorySearch}
             onChange={(e) => setCategorySearch(e.target.value)}
             placeholder="Category…"
-            className="w-full bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2 py-1 focus:outline-none focus:border-indigo-500"
+            className="w-full bg-white/[0.02] border border-white/[0.08] text-white/90 text-xs rounded px-2 py-1 focus:outline-none focus:border-brand-400/40"
           />
         </div>
         {category && (
@@ -465,7 +465,7 @@ export default function TicketActions({
 
 function Check() {
   return (
-    <svg width="10" height="10" viewBox="0 0 10 10" className="flex-shrink-0 text-indigo-400" aria-hidden="true">
+    <svg width="10" height="10" viewBox="0 0 10 10" className="flex-shrink-0 text-brand-400" aria-hidden="true">
       <path d="M2 5 L4 7 L8 3" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
