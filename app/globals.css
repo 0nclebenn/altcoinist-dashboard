@@ -23,11 +23,39 @@
 
 html, body { height: 100%; }
 
+html {
+  /* Tells the browser to render form controls (selects, date pickers, scrollbars)
+     in dark mode so the option list is dark by default. */
+  color-scheme: dark;
+}
+
 body {
   font-family: "Inter", system-ui, sans-serif;
   background: #000;
   color: #fff;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Native select / option styling                                              */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/* The dropdown panel itself (the OS-rendered list) */
+select option {
+  background-color: rgba(8, 8, 8, 0.98);
+  color: #fff;
+  padding: 6px 8px;
+}
+
+select option:checked,
+select option:hover {
+  background-color: rgba(56, 255, 147, 0.12);
+  color: #38FF93;
+}
+
+/* Disabled placeholder option (e.g. "Select an admin to transfer to…") */
+select option[disabled] {
+  color: rgba(255, 255, 255, 0.45);
 }
 
 /* Selection */
