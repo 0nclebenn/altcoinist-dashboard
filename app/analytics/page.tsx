@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import Charts from "@/components/Charts";
+import FCRWidget from "./components/FCRWidget";
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -333,6 +334,10 @@ export default function AnalyticsPage() {
           onChange={(from, to) => { setFromDate(from); setToDate(to); }}
         />
       </div>
+
+      {/* Section 00 — Live FCR */}
+      <SectionDivider label="// 00 / fcr" />
+      <FCRWidget />
 
       {/* Section 01 — Overview */}
       <SectionDivider label="// 01 / overview" />
